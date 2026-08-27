@@ -1,0 +1,26 @@
+diff --git a/apps/app-frontend/src/components/ui/InstanceCreationModal.vue b/apps/app-frontend/src/components/ui/InstanceCreationModal.vue
+index 9333a75a..e439c203 100644
+--- a/apps/app-frontend/src/components/ui/InstanceCreationModal.vue
++++ b/apps/app-frontend/src/components/ui/InstanceCreationModal.vue
+@@ -379,7 +379,7 @@ const upload_icon = async () => {
+     ],
+   })
+ 
+-  icon.value = res ? res.path : null
++  icon.value = res ? res : null
+ 
+   if (!icon.value) return
+   display_icon.value = convertFileSrc(icon.value)
+diff --git a/apps/app-frontend/src/pages/instance/Options.vue b/apps/app-frontend/src/pages/instance/Options.vue
+index e4166eab..9ca84390 100644
+--- a/apps/app-frontend/src/pages/instance/Options.vue
++++ b/apps/app-frontend/src/pages/instance/Options.vue
+@@ -581,7 +581,7 @@ async function setIcon() {
+ 
+   if (!value) return
+ 
+-  icon.value = value.path
++  icon.value = value
+   await edit_icon(props.instance.path, icon.value).catch(handleError)
+ 
+   trackEvent('InstanceSetIcon')

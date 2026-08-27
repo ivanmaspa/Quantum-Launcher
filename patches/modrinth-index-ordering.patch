@@ -1,0 +1,22 @@
+diff --git a/packages/app-lib/src/api/profile/mod.rs b/packages/app-lib/src/api/profile/mod.rs
+index aaa2864a..7addca68 100644
+--- a/packages/app-lib/src/api/profile/mod.rs
++++ b/packages/app-lib/src/api/profile/mod.rs
+@@ -845,7 +845,7 @@ pub async fn create_mrpack_json(
+     )
+     .await?;
+ 
+-    let files = projects
++    let mut files = projects
+         .into_iter()
+         .filter_map(|(path, version_id)| {
+             if let Some(version) = versions.iter().find(|x| x.id == version_id)
+@@ -890,6 +890,8 @@ pub async fn create_mrpack_json(
+         })
+         .collect::<crate::Result<Vec<PackFile>>>()?;
+ 
++    files.sort_by(|a, b| a.path.cmp(&b.path));
++    
+     Ok(PackFormat {
+         game: "minecraft".to_string(),
+         format_version: 1,

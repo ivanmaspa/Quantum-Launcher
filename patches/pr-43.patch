@@ -1,0 +1,46 @@
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index 6d429ffb..f261561f 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -188,7 +188,20 @@ fn main() {
+         .plugin(tauri_plugin_shell::init())
+         .plugin(
+             tauri_plugin_window_state::Builder::default()
+-                .with_filename("app-window-state.json")
++                .with_filename(
++                    if std::env::current_dir()
++                        .ok()
++                        .map(|dir| dir.join("portable.txt").exists())
++                        .unwrap_or(false)
++                    {
++                        std::env::current_dir()
++                            .ok()
++                            .map(|dir| dir.join("UserData/app-window-state.json").to_string_lossy().into_owned())
++                            .unwrap()
++                    } else {
++                        "app-window-state.json".to_string()
++                    },
++                )
+                 .build(),
+         )
+         .setup(|app| {
+diff --git a/packages/app-lib/src/state/dirs.rs b/packages/app-lib/src/state/dirs.rs
+index 96148a91..038313d6 100644
+--- a/packages/app-lib/src/state/dirs.rs
++++ b/packages/app-lib/src/state/dirs.rs
+@@ -23,8 +23,13 @@ impl DirectoryInfo {
+     // Get the settings directory
+     // init() is not needed for this function
+     pub fn get_initial_settings_dir() -> Option<PathBuf> {
+-        Self::env_path("THESEUS_CONFIG_DIR")
+-            .or_else(|| Some(dirs::data_dir()?.join("AstralRinthApp")))
++        Self::env_path("THESEUS_CONFIG_DIR").or_else(|| {
++            if std::env::current_dir().ok()?.join("portable.txt").exists() {
++                Some(std::path::Path::new("UserData").to_path_buf())
++            } else {
++                Some(dirs::data_dir()?.join("AstralRinthApp"))
++            }
++        })
+     }
+ 
+     /// Get all paths needed for Theseus to operate properly
