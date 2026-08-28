@@ -162,17 +162,23 @@ onUnmounted(() => {
           Лёгкий и быстрый лаунчер Minecraft с поддержкой оффлайн-режима и модов.
         </p>
         <div class="flex items-center gap-3 mt-5">
-          <ButtonStyled color="brand" type="standard" @click="playLast">
-            <PlayIcon class="w-5 h-5" />
-            <span>{{ recentInstances.length ? 'Играть' : 'Найти модпаки' }}</span>
+          <ButtonStyled color="brand" type="standard">
+            <button class="m-0" @click="playLast">
+              <PlayIcon class="w-5 h-5" />
+              <span>{{ recentInstances.length ? 'Играть' : 'Найти модпаки' }}</span>
+            </button>
           </ButtonStyled>
-          <ButtonStyled color="brand" type="outlined" @click="createInstance">
-            <PlusIcon class="w-5 h-5" />
-            <span>Новый инстанс</span>
+          <ButtonStyled color="brand" type="outlined">
+            <button class="m-0" @click="createInstance">
+              <PlusIcon class="w-5 h-5" />
+              <span>Новый инстанс</span>
+            </button>
           </ButtonStyled>
-          <ButtonStyled color="brand" type="transparent" @click="window.location.hash = '#/library'">
-            <CompassIcon class="w-5 h-5" />
-            <span>Библиотека</span>
+          <ButtonStyled color="brand" type="transparent">
+            <button class="m-0" @click="window.location.hash = '#/library'">
+              <CompassIcon class="w-5 h-5" />
+              <span>Библиотека</span>
+            </button>
           </ButtonStyled>
         </div>
       </div>
