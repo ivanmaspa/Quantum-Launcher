@@ -170,7 +170,17 @@ export async function get_pack_export_candidates(profilePath) {
 // Run Minecraft using a pathed profile
 // Returns PID of child
 export async function run(path) {
-  return await invoke('plugin:profile|profile_run', { path })
+  const result = await invoke('plugin:profile|profile_run', { path })
+  // Авто-перемещение в голосовой канал Discord при запуске (если включено)
+  try {
+    const cfg = await invoke('discord_link_get')
+    if (cfg && cfg.auto_voice && cfg.voice_channel_id && cfg.bot_token) {
+      invoke('discord_move_to_voice', { channelId: cfg.voice_channel_id }).catch(() => {})
+    }
+  } catch (e) {
+    // Discord-связка не настроена — игнорируем
+  }
+  return result
 }
 
 export async function kill(path) {

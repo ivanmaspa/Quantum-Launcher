@@ -8,6 +8,7 @@ import {
   PaintBrushIcon,
   GameIcon,
   CoffeeIcon,
+  DiscordIcon,
 } from '@modrinth/assets'
 import { TabbedModal } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
@@ -17,6 +18,7 @@ import JavaSettings from '@/components/ui/settings/JavaSettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSettings.vue'
+import DiscordSettings from '@/components/ui/settings/DiscordSettings.vue'
 import { getVersion } from '@tauri-apps/api/app'
 import { version as getOsVersion, platform as getOsPlatform } from '@tauri-apps/plugin-os'
 import { useTheming } from '@/store/state'
@@ -75,6 +77,14 @@ const tabs = [
     }),
     icon: GaugeIcon,
     content: ResourceManagementSettings,
+  },
+  {
+    name: defineMessage({
+      id: 'app.settings.tabs.discord',
+      defaultMessage: 'Discord',
+    }),
+    icon: DiscordIcon,
+    content: DiscordSettings,
   },
   {
     name: defineMessage({

@@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 pub mod auth;
+pub mod discord_link;
 pub mod import;
 pub mod jre;
 pub mod logs;

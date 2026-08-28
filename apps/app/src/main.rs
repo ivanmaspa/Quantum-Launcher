@@ -274,6 +274,7 @@ fn main() {
         .plugin(api::utils::init())
         .plugin(api::cache::init())
         .plugin(api::friends::init())
+        .plugin(api::discord_link::init())
         .invoke_handler(tauri::generate_handler![
             initialize_state,
             is_dev,

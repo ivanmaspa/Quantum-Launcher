@@ -74,6 +74,10 @@
           <p class="warning">Select a game version before you select a loader version</p>
         </div>
       </div>
+      <div class="input-row">
+        <Checkbox v-model="discord_voice" class="mr-2" />
+        <p class="input-label m-0">Создать голосовой канал Discord для этого сервера</p>
+      </div>
       <div class="input-group push-right">
         <Button @click="toggle_advanced">
           <CodeIcon />
@@ -213,7 +217,7 @@ import { computed, onUnmounted, ref, shallowRef } from 'vue'
 import { get_loaders } from '@/helpers/tags'
 import { create } from '@/helpers/profile'
 import { open } from '@tauri-apps/plugin-dialog'
-import { convertFileSrc } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { get_game_versions, get_loader_versions } from '@/helpers/metadata'
 import { handleError } from '@/store/notifications.js'
 import Multiselect from 'vue-multiselect'
@@ -236,6 +240,7 @@ const icon = ref(null)
 const display_icon = ref(null)
 const showAdvanced = ref(false)
 const creating = ref(false)
+const discord_voice = ref(false)
 const showSnapshots = ref(false)
 const creationType = ref('custom')
 const isShowing = ref(false)
@@ -359,6 +364,17 @@ const create_instance = async () => {
     loader.value === 'vanilla' ? null : loader_version_value ?? 'stable',
     icon.value,
   ).catch(handleError)
+
+  if (discord_voice.value) {
+    try {
+      const id = await invoke('discord_create_voice_channel', {
+        name: profile_name.value,
+      })
+      await invoke('discord_link_set', { voiceChannelId: id })
+    } catch (e) {
+      handleError(e)
+    }
+  }
 
   trackEvent('InstanceCreate', {
     profile_name: profile_name.value,
