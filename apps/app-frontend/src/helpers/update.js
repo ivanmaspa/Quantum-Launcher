@@ -172,5 +172,5 @@ function getExtension() {
   } else if (os.value.toLowerCase() == osNames[1]) {
     return windowsExtension
   }
-  return null
+  return '.deb'
 }
