@@ -45,7 +45,7 @@
   },
   "productName": "Quantum Launcher",
   "version": "0.1.0-beta.1",
-  "mainBinaryName": "Quantum Launcher",
+  "mainBinaryName": "quantum-launcher",
   "identifier": "QuantumLauncherApp",
   "plugins": {
     "deep-link": {

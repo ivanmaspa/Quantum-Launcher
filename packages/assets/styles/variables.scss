@@ -16,27 +16,27 @@
 
   --color-red: #cb2245;
   --color-orange: #e08325;
-  --color-green: #00af5c;
+  --color-green: #0f9d5b;
   --color-blue: #1f68c0;
   --color-purple: #8e32f3;
   --color-gray: #595b61;
 
   --color-red-highlight: rgba(203, 34, 69, 0.25);
   --color-orange-highlight: rgba(224, 131, 37, 0.25);
-  --color-green-highlight: rgba(0, 175, 92, 0.25);
+  --color-green-highlight: rgba(15, 157, 91, 0.25);
   --color-blue-highlight: rgba(31, 104, 192, 0.25);
   --color-purple-highlight: rgba(142, 50, 243, 0.25);
   --color-gray-highlight: rgba(89, 91, 97, 0.25);
 
   --color-red-bg: rgba(203, 34, 69, 0.1);
   --color-orange-bg: rgba(224, 131, 37, 0.1);
-  --color-green-bg: rgba(0, 175, 92, 0.1);
+  --color-green-bg: rgba(15, 157, 91, 0.1);
   --color-blue-bg: rgba(31, 104, 192, 0.1);
   --color-purple-bg: rgba(142, 50, 243, 0.1);
 
   --color-brand: var(--color-green);
   --color-brand-highlight: var(--color-green-highlight);
-  --color-brand-shadow: rgba(0, 175, 92, 0.7);
+  --color-brand-shadow: rgba(15, 157, 91, 0.7);
 
   --shadow-inset-lg: inset 0px -2px 2px hsla(221, 39%, 91%, 0.1);
   --shadow-inset: inset 0px -2px 2px hsla(221, 39%, 91%, 0.05);
@@ -53,8 +53,8 @@
 
   --brand-gradient-bg: linear-gradient(
     0deg,
-    rgba(68, 182, 138, 0.175) 0%,
-    rgba(58, 250, 112, 0.125) 100%
+    rgba(15, 157, 91, 0.175) 0%,
+    rgba(23, 168, 98, 0.125) 100%
   );
   --brand-gradient-button: rgba(255, 255, 255, 0.5);
   --brand-gradient-border: rgba(32, 64, 32, 0.15);
@@ -63,7 +63,7 @@
   --color-button-bg-selected: var(--color-brand);
   --color-button-text-selected: var(--color-accent-contrast);
 
-  --loading-bar-gradient: linear-gradient(to right, var(--color-brand) 0%, #00af5c 100%);
+  --loading-bar-gradient: linear-gradient(to right, var(--color-brand) 0%, #0f9d5b 100%);
 
   --color-platform-fabric: #8a7b71;
   --color-platform-quilt: #8b61b4;
@@ -133,27 +133,27 @@ html {
 
   --color-red: #ff496e;
   --color-orange: #ffa347;
-  --color-green: #1bd96a;
+  --color-green: #2bbf77;
   --color-blue: #4f9cff;
   --color-purple: #c78aff;
   --color-gray: #9fa4b3;
 
   --color-red-highlight: rgba(255, 73, 110, 0.25);
   --color-orange-highlight: rgba(255, 163, 71, 0.25);
-  --color-green-highlight: rgba(27, 217, 106, 0.25);
+  --color-green-highlight: rgba(43, 191, 119, 0.25);
   --color-blue-highlight: rgba(79, 156, 255, 0.25);
   --color-purple-highlight: rgba(199, 138, 255, 0.25);
   --color-gray-highlight: rgba(159, 164, 179, 0.25);
 
   --color-red-bg: rgba(255, 73, 110, 0.2);
   --color-orange-bg: rgba(255, 163, 71, 0.2);
-  --color-green-bg: rgba(27, 217, 106, 0.2);
+  --color-green-bg: rgba(43, 191, 119, 0.2);
   --color-blue-bg: rgba(79, 156, 255, 0.2);
   --color-purple-bg: rgba(199, 138, 255, 0.2);
 
   --color-brand: var(--color-green);
-  --color-brand-highlight: rgba(27, 217, 106, 0.25);
-  --color-brand-shadow: rgba(27, 217, 106, 0.7);
+  --color-brand-highlight: rgba(43, 191, 119, 0.25);
+  --color-brand-shadow: rgba(43, 191, 119, 0.7);
 
   --shadow-inset-lg: inset 0px -2px 2px hsla(221, 39%, 11%, 0.1);
   --shadow-inset: inset 0px -2px 2px hsla(221, 39%, 11%, 0.05);
@@ -166,15 +166,15 @@ html {
 
   --shadow-card: rgba(0, 0, 0, 0.25) 0px 2px 4px 0px;
 
-  --brand-gradient-bg: linear-gradient(0deg, rgba(14, 35, 19, 0.2) 0%, rgba(55, 137, 73, 0.1) 100%);
+  --brand-gradient-bg: linear-gradient(0deg, rgba(16, 52, 35, 0.2) 0%, rgba(43, 191, 119, 0.08) 100%);
   --brand-gradient-button: rgba(255, 255, 255, 0.08);
-  --brand-gradient-border: rgba(155, 255, 160, 0.08);
+  --brand-gradient-border: rgba(120, 255, 180, 0.08);
   --brand-gradient-fade-out-color: linear-gradient(to bottom, rgba(24, 30, 31, 0), #171d1e 80%);
 
   --color-button-bg-selected: var(--color-brand-highlight);
   --color-button-text-selected: var(--color-brand);
 
-  --loading-bar-gradient: linear-gradient(to right, var(--color-brand) 0%, #1ffa9a 100%);
+  --loading-bar-gradient: linear-gradient(to right, var(--color-brand) 0%, #55c98f 100%);
 
   --color-platform-fabric: #dbb69b;
   --color-platform-quilt: #c796f9;
@@ -202,8 +202,8 @@ html {
 
   --brand-gradient-bg: linear-gradient(
     0deg,
-    rgba(22, 66, 51, 0.15) 0%,
-    rgba(55, 137, 73, 0.1) 100%
+    rgba(16, 66, 42, 0.15) 0%,
+    rgba(43, 191, 119, 0.08) 100%
   );
 }
 

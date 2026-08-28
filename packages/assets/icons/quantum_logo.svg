@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c2420"/>
+      <stop offset="1" stop-color="#10140f"/>
+    </linearGradient>
+    <linearGradient id="grassTop" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#77c85a"/>
+      <stop offset="1" stop-color="#4fa03c"/>
+    </linearGradient>
+    <linearGradient id="dirtL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a6a45"/>
+      <stop offset="1" stop-color="#6b4f31"/>
+    </linearGradient>
+    <linearGradient id="dirtR" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5e442a"/>
+      <stop offset="1" stop-color="#4a3520"/>
+    </linearGradient>
+    <linearGradient id="gear" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ee089"/>
+      <stop offset="1" stop-color="#1f9d55"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Фон: скруглённый квадрат с зелёной обводкой -->
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)" stroke="#2bbf77" stroke-width="6"/>
+
+  <!-- Частицы зачарования (приглушённые ромбы-звёздочки) -->
+  <g fill="#7fe8a8" opacity="0.85">
+    <path d="M46 60 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" filter="url(#glow)"/>
+    <path d="M210 44 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" filter="url(#glow)"/>
+    <path d="M42 196 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" filter="url(#glow)"/>
+    <path d="M212 208 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" filter="url(#glow)"/>
+    <path d="M128 22 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" filter="url(#glow)"/>
+    <circle cx="70" cy="130" r="2.2" filter="url(#glow)"/>
+    <circle cx="186" cy="126" r="2.2" filter="url(#glow)"/>
+    <circle cx="96" cy="226" r="2" filter="url(#glow)"/>
+    <circle cx="164" cy="34" r="2" filter="url(#glow)"/>
+  </g>
+
+  <!-- Блок земли (изометрия) -->
+  <g transform="translate(128 138)">
+    <!-- верхняя грань - трава -->
+    <path d="M0 -66 L57 -33 L0 0 L-57 -33 Z" fill="url(#grassTop)"/>
+    <!-- левая грань - земля -->
+    <path d="M-57 -33 L0 0 L0 56 L-57 23 Z" fill="url(#dirtL)"/>
+    <!-- правая грань - земля -->
+    <path d="M57 -33 L0 0 L0 56 L57 23 Z" fill="url(#dirtR)"/>
+    <!-- травянистые капли, свисающие с верха -->
+    <g fill="#5aa845">
+      <path d="M-52 -28 q-8 16 -6 30 l6 -20z"/>
+      <path d="M-28 -26 q-9 14 -4 30 l6 -22z"/>
+      <path d="M28 -26 q9 14 4 30 l-6 -22z"/>
+      <path d="M50 -28 q8 16 6 30 l-6 -20z"/>
+    </g>
+  </g>
+
+  <!-- Зелёная шестерёнка по центру -->
+  <g transform="translate(128 138)" filter="url(#glow)">
+    <circle r="34" fill="url(#gear)"/>
+    <g fill="url(#gear)">
+      <!-- 8 зубьев -->
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(0 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(45 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(90 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(135 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(180 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(225 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(270 0 0)"/>
+      <path d="M-8 -40 h16 v13 h-16z" transform="rotate(315 0 0)"/>
+    </g>
+    <circle r="14" fill="#0e1410"/>
+  </g>
+</svg>

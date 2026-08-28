@@ -60,12 +60,25 @@ import dayjs from 'dayjs'
 import FriendsList from '@/components/ui/friends/FriendsList.vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
+import ParticleBackground from '@/components/ui/ParticleBackground.vue'
 
 const themeStore = useTheming()
 
 const news = ref([])
 
 const urlModal = ref(null)
+const installationModal = ref(null)
+
+const wobbling = ref(false)
+let wobbleTimer = null
+function startWobble() {
+  wobbling.value = true
+  clearTimeout(wobbleTimer)
+  wobbleTimer = setTimeout(() => (wobbling.value = false), 700)
+}
+function stopWobble() {
+  // оставляем активным на короткое время, чтобы цикл был плавным
+}
 
 const offline = ref(!navigator.onLine)
 window.addEventListener('offline', () => {
@@ -91,6 +104,9 @@ onMounted(async () => {
 
   document.querySelector('body').addEventListener('click', handleClick)
   document.querySelector('body').addEventListener('auxclick', handleAuxClick)
+  document.addEventListener('open-instance-creation', () => {
+    installationModal?.value?.show()
+  })
 })
 
 onUnmounted(() => {
@@ -374,7 +390,12 @@ function handleAuxClick(e) {
 <template>
   <SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
   <div id="teleports"></div>
-  <div v-if="stateInitialized" class="app-grid-layout relative">
+  <ParticleBackground />
+  <div
+    v-if="stateInitialized"
+    class="app-grid-layout relative"
+    :class="{ 'ql-wobble': wobbling }"
+  >
     <Suspense>
       <AppSettingsModal ref="settingsModal" />
     </Suspense>
@@ -383,12 +404,13 @@ function handleAuxClick(e) {
     </Suspense>
     <div
       class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.5rem] w-[--left-bar-width]"
+      @mouseenter="startWobble"
     >
       <NavButton v-tooltip.right="'Home'" to="/">
         <HomeIcon />
       </NavButton>
       <NavButton
-        v-tooltip.right="'Discover content'"
+        v-tooltip.right="'Поиск контента'"
         to="/browse/modpack"
         :is-primary="() => route.path.startsWith('/browse') && !route.query.i"
         :is-subpage="(route) => route.path.startsWith('/project') && !route.query.i"
@@ -396,7 +418,7 @@ function handleAuxClick(e) {
         <CompassIcon />
       </NavButton>
       <NavButton
-        v-tooltip.right="'Library'"
+        v-tooltip.right="'Библиотека'"
         to="/library"
         :is-subpage="
           () =>
@@ -412,17 +434,17 @@ function handleAuxClick(e) {
         <QuickInstanceSwitcher />
       </suspense>
       <NavButton
-        v-tooltip.right="'Create new instance'"
+        v-tooltip.right="'Новый инстанс'"
         :to="() => $refs.installationModal.show()"
         :disabled="offline"
       >
         <PlusIcon />
       </NavButton>
       <div class="flex flex-grow"></div>
-      <NavButton v-if="updateAvailable" v-tooltip.right="'Install update'" :to="() => restartApp()">
+      <NavButton v-if="updateAvailable" v-tooltip.right="'Установить обновление'" :to="() => restartApp()">
         <DownloadIcon />
       </NavButton>
-      <NavButton v-tooltip.right="'Settings'" :to="() => $refs.settingsModal.show()">
+      <NavButton v-tooltip.right="'Настройки'" :to="() => $refs.settingsModal.show()">
         <SettingsIcon />
       </NavButton>
       <ButtonStyled v-if="credentials" type="transparent" circular>
@@ -836,6 +858,18 @@ function handleAuxClick(e) {
   .profile-card {
     right: 8rem;
   }
+}
+
+@keyframes ql-wobble-anim {
+  0% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-1.2px) rotate(-0.12deg); }
+  50% { transform: translateX(1.2px) rotate(0.12deg); }
+  75% { transform: translateX(-0.8px) rotate(-0.08deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+.ql-wobble {
+  animation: ql-wobble-anim 0.7s ease-in-out;
 }
 </style>
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>

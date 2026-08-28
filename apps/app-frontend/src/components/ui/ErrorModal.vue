@@ -60,7 +60,7 @@ defineExpose({
       supportLink.value = 'https://support.modrinth.com'
       metadata.value.profilePath = context.profilePath
     } else if (source === 'state_init') {
-      title.value = 'Error initializing Modrinth App'
+      title.value = 'Error initializing Quantum Launcher'
       errorType.value = 'state_init'
       supportLink.value = 'https://support.modrinth.com'
     } else {
@@ -128,7 +128,7 @@ async function repairInstance() {
           <template v-if="metadata.network">
             <h3>Network issues</h3>
             <p>
-              It looks like there were issues with the Modrinth App connecting to Microsoft's
+              It looks like there were issues with the Quantum Launcher connecting to Microsoft's
               servers. This is often the result of a poor connection, so we recommend trying again
               to see if it works. If issues continue to persist, follow the steps in
               <a
@@ -142,7 +142,7 @@ async function repairInstance() {
           <template v-else-if="metadata.hostsFile">
             <h3>Network issues</h3>
             <p>
-              The Modrinth App tried to connect to Microsoft / Xbox / Minecraft services, but the
+              The Quantum Launcher tried to connect to Microsoft / Xbox / Minecraft services, but the
               remote server rejected the connection. This may indicate that these services are
               blocked by the hosts file. Please visit
               <a
@@ -181,7 +181,7 @@ async function repairInstance() {
           <template v-if="metadata.readOnly">
             <h3>Change directory permissions</h3>
             <p>
-              It looks like the Modrinth App is unable to write to the directory you selected.
+              It looks like the Quantum Launcher is unable to write to the directory you selected.
               Please adjust the permissions of the directory and try again or cancel the directory
               change.
             </p>
@@ -195,7 +195,7 @@ async function repairInstance() {
           </template>
           <template v-else>
             <p>
-              The Modrinth App is unable to migrate to the new directory you selected. Please
+              The Quantum Launcher is unable to migrate to the new directory you selected. Please
               contact support for help or cancel the directory change.
             </p>
           </template>
@@ -225,7 +225,7 @@ async function repairInstance() {
         </div>
         <template v-else-if="errorType === 'state_init'">
           <p>
-            Modrinth App failed to load correctly. This may be because of a corrupted file, or
+            Quantum Launcher failed to load correctly. This may be because of a corrupted file, or
             because the app is missing crucial files.
           </p>
           <p>You may be able to fix it through one of the following ways:</p>
@@ -235,7 +235,7 @@ async function repairInstance() {
           </ul>
         </template>
         <template v-else-if="errorType === 'no_loader_version'">
-          <p>The Modrinth App failed to find the loader version for this instance.</p>
+          <p>The Quantum Launcher failed to find the loader version for this instance.</p>
           <p>To resolve this, you need to repair the instance. Click the button below to do so.</p>
           <div class="cta-button">
             <button class="btn btn-primary" :disabled="loadingRepair" @click="repairInstance">
