@@ -220,6 +220,111 @@ pub async fn offline_auth(
     Ok(credentials)
 }
 
+/// Marker stored in `refresh_token` to identify Ely.by accounts without a DB schema change
+pub const ELYBY_MARKER: &str = "elyby";
+
+#[derive(Deserialize, Debug)]
+struct ElyAuthenticateResponse {
+    pub access_token: String,
+    #[serde(default)]
+    pub selected_profile: Option<ElyProfile>,
+    #[serde(default)]
+    pub error: Option<String>,
+    #[serde(default)]
+    pub error_message: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+struct ElyProfile {
+    pub id: String,
+    pub name: String,
+}
+
+/// Authenticate against the Ely.by auth server (Yggdrasil-compatible) using a
+/// username and password. Returns a real UUID + access token so the player can
+/// join Ely.by-powered servers and have their skin loaded in-game.
+#[tracing::instrument]
+pub async fn ely_auth(
+    username: &str,
+    password: &str,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+) -> crate::Result<Credentials> {
+    let client_token = Uuid::new_v4().to_string();
+
+    let res = auth_retry(|| {
+        REQWEST_CLIENT
+            .post("https://authserver.ely.by/authserver/authenticate")
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .json(&json!({
+                "username": username,
+                "password": password,
+                "clientToken": client_token,
+                "requestUser": true,
+            }))
+            .send()
+    })
+    .await
+    .map_err(|source| {
+        crate::ErrorKind::OtherError(format!(
+            "Ошибка подключения к Ely.by: {source}"
+        ))
+        .as_error()
+    })?;
+
+    let status = res.status();
+    let text = res.text().await.map_err(|source| {
+        crate::ErrorKind::OtherError(format!("Ошибка чтения ответа Ely.by: {source}"))
+            .as_error()
+    })?;
+
+    if !status.is_success() {
+        let msg = serde_json::from_str::<ElyAuthenticateResponse>(&text)
+            .ok()
+            .and_then(|x| x.error_message.or(x.error))
+            .unwrap_or_else(|| "Неверный логин или пароль Ely.by".to_string());
+        return Err(
+            crate::ErrorKind::OtherError(format!("Ely.by: {msg}")).as_error()
+        );
+    }
+
+    let body = serde_json::from_str::<ElyAuthenticateResponse>(&text)
+        .map_err(|source| {
+            crate::ErrorKind::OtherError(format!(
+                "Ошибка разбора ответа Ely.by: {source}"
+            ))
+            .as_error()
+        })?;
+
+    let profile = body.selected_profile.ok_or_else(|| {
+        crate::ErrorKind::OtherError(
+            "Аккаунт Ely.by не содержит профиль Minecraft".to_string(),
+        )
+        .as_error()
+    })?;
+
+    let id = Uuid::parse_str(&profile.id).map_err(|_| {
+        crate::ErrorKind::OtherError(format!(
+            "Некорректный UUID профиля Ely.by: {}",
+            profile.id
+        ))
+        .as_error()
+    })?;
+
+    let credentials = Credentials {
+        id,
+        username: profile.name,
+        access_token: body.access_token,
+        refresh_token: ELYBY_MARKER.to_string(),
+        expires: Utc::now() + Duration::days(365 * 99),
+        active: true,
+    };
+
+    credentials.upsert(exec).await?;
+
+    Ok(credentials)
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Credentials {
     pub id: Uuid,

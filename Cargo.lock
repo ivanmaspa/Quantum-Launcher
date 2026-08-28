@@ -1169,7 +1169,7 @@ dependencies = [
 
 [[package]]
 name = "daedalus"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
  "bytes 1.9.0",
  "chrono",
@@ -1180,7 +1180,7 @@ dependencies = [
 
 [[package]]
 name = "daedalus_client"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
  "async_zip",
  "bytes 1.9.0",
@@ -6699,7 +6699,7 @@ dependencies = [
 
 [[package]]
 name = "theseus"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
  "async-recursion",
  "async-tungstenite",
@@ -6750,7 +6750,7 @@ dependencies = [
 
 [[package]]
 name = "theseus_gui"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 dependencies = [
  "chrono",
  "cocoa 0.25.0",

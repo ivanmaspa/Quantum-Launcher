@@ -8,6 +8,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     tauri::plugin::Builder::<R>::new("auth")
         .invoke_handler(tauri::generate_handler![
             offline_login,
+            ely_login,
             login,
             remove_user,
             get_default_user,
@@ -19,9 +20,16 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
 /// Create new offline user
 /// Custom offline authorization (ported from AstralRinth / Astralium)
-#[tauri::command]
+    #[tauri::command]
 pub async fn offline_login(name: &str) -> Result<Credentials> {
     let credentials = minecraft_auth::offline_auth(name).await?;
+    Ok(credentials)
+}
+
+/// Authenticate a user with Ely.by (pirate auth server, Yggdrasil-compatible)
+#[tauri::command]
+pub async fn ely_login(username: &str, password: &str) -> Result<Credentials> {
+    let credentials = minecraft_auth::ely_auth(username, password).await?;
     Ok(credentials)
 }
 

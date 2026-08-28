@@ -10,7 +10,7 @@
       size="36px"
       :src="
         selectedAccount
-          ? `https://mc-heads.net/avatar/${selectedAccount.id}/128`
+          ? accountSkin(selectedAccount)
           : 'https://launcher-files.modrinth.com/assets/steve_head.png'
       "
     />
@@ -27,7 +27,7 @@
     <Card v-if="showCard || mode === 'isolated'" ref="card" class="account-card"
       :class="{ expanded: mode === 'expanded', isolated: mode === 'isolated' }">
       <div v-if="selectedAccount" class="selected account">
-        <Avatar size="xs" :src="`https://mc-heads.net/avatar/${selectedAccount.username}/128`" />
+        <Avatar size="xs" :src="accountSkin(selectedAccount)" />
         <div>
           <h4>
             <component :is="getAccountType(selectedAccount)" class="vector-icon" /> {{ selectedAccount.username }}
@@ -46,11 +46,14 @@
         <Button v-tooltip="'Add offline'" icon-only @click="tryOfflineLogin()">
           <PirateIcon />
         </Button>
+        <Button v-tooltip="'Войти через Ely.by'" icon-only @click="tryElyLogin()">
+          <ElybyIcon />
+        </Button>
       </div>
       <div v-if="displayAccounts.length > 0" class="account-group">
         <div v-for="account in displayAccounts" :key="account.id" class="account-row">
           <Button class="option account" @click="setAccount(account)">
-            <Avatar :src="`https://mc-heads.net/avatar/${account.username}/128`" class="icon" />
+            <Avatar :src="accountSkin(account)" class="icon" />
             <p class="account-type">
               <component :is="getAccountType(account)" class="vector-icon" />
               {{ account.username }}
@@ -67,6 +70,9 @@
         </Button>
         <Button v-tooltip="'Add offline'" icon-only @click="tryOfflineLogin()">
           <PirateIcon />
+        </Button>
+        <Button v-tooltip="'Войти через Ely.by'" icon-only @click="tryElyLogin()">
+          <ElybyIcon />
         </Button>
       </div>
     </Card>
@@ -93,14 +99,39 @@
       <div class="label">Unexcepted error</div>
     </div>
   </ModalWrapper>
+  <ModalWrapper ref="loginElyModal" class="modal" header="Вход через Ely.by">
+    <div class="modal-body" style="flex-direction: column; align-items: stretch">
+      <div class="label">Имя пользователя Ely.by</div>
+      <input type="text" v-model="elyUsername" placeholder="Логин Ely.by" />
+      <div class="label">Пароль</div>
+      <input
+        type="password"
+        v-model="elyPassword"
+        placeholder="Пароль Ely.by"
+        @keyup.enter="elyLoginFinally()"
+      />
+      <Button icon-only color="secondary" @click="elyLoginFinally()">
+        Продолжить
+      </Button>
+    </div>
+  </ModalWrapper>
+  <ModalWrapper ref="elyErrorModal" class="modal" header="Ошибка входа Ely.by">
+    <div class="modal-body">
+      <div class="label">
+        Не удалось войти через Ely.by. Проверьте логин и пароль.
+      </div>
+      <Button color="primary" @click="retryElyLogin()">Попробовать снова</Button>
+    </div>
+  </ModalWrapper>
 </template>
 
 <script setup>
-import { DropdownIcon, PlusIcon, TrashIcon, LogInIcon, PirateIcon as Offline, MicrosoftIcon as License, MicrosoftIcon, PirateIcon } from '@modrinth/assets'
+import { DropdownIcon, PlusIcon, TrashIcon, LogInIcon, PirateIcon as Offline, MicrosoftIcon as License, MicrosoftIcon, PirateIcon, GlobeIcon as ElybyIcon } from '@modrinth/assets'
 import { Avatar, Button, Card } from '@modrinth/ui'
 import { ref, computed, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import {
   offline_login,
+  ely_login,
   users,
   remove_user,
   set_default_user,
@@ -128,7 +159,11 @@ const defaultUser = ref()
 const loginOfflineModal = ref(null)
 const loginErrorModal = ref(null)
 const unexpectedErrorModal = ref(null)
+const loginElyModal = ref(null)
+const elyErrorModal = ref(null)
 const playerName = ref('')
+const elyUsername = ref('')
+const elyPassword = ref('')
 
 async function tryOfflineLogin() { // Patched
   loginOfflineModal.value.show()
@@ -159,11 +194,53 @@ function retryOfflineLogin() { // Patched
 }
 
 function getAccountType(account) { // Patched
-  if (account.access_token != "null" && account.access_token != null && account.access_token != "") {
+  if (account.refresh_token === 'elyby') {
+    return ElybyIcon
+  } else if (account.access_token != "null" && account.access_token != null && account.access_token != "") {
     return License
   } else {
     return Offline
   }
+}
+
+function accountSkin(account) { // Patched
+  if (account.refresh_token === 'elyby') {
+    return `https://skin.ely.by/skin/${account.username}.png`
+  }
+  return `https://mc-heads.net/avatar/${account.username}/128`
+}
+
+async function tryElyLogin() { // Patched
+  elyUsername.value = ''
+  elyPassword.value = ''
+  loginElyModal.value.show()
+}
+
+async function elyLoginFinally() { // Patched
+  const username = elyUsername.value.trim()
+  const password = elyPassword.value
+  if (username.length > 0 && password.length > 0) {
+    const loggedIn = await ely_login(username, password).catch((err) => {
+      handleError(err)
+      return null
+    })
+    loginElyModal.value.hide()
+    if (loggedIn) {
+      await setAccount(loggedIn)
+      await refreshValues()
+    } else {
+      elyErrorModal.value.show()
+    }
+    elyUsername.value = ''
+    elyPassword.value = ''
+  } else {
+    elyErrorModal.value.show()
+  }
+}
+
+function retryElyLogin() { // Patched
+  elyErrorModal.value.hide()
+  tryElyLogin()
 }
 
 async function refreshValues() {

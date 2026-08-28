@@ -39,10 +39,14 @@ pub(crate) const INACTIVE_STATE: [&str; 6] = [
 impl DiscordGuard {
     /// Initialize discord IPC client, and attempt to connect to it
     /// If it fails, it will still return a DiscordGuard, but the client will be unconnected
+    /// Discord Application ID (Client ID) для Quantum Launcher.
+    /// ЗАМЕНИТЕ на свой ID из https://discord.com/developers/applications
+    /// (пока не зарегистрирован — Rich Presence не будет работать, но не упадёт).
+    pub const QUANTUM_DISCORD_CLIENT_ID: &str = "REPLACE_WITH_YOUR_DISCORD_CLIENT_ID";
+
     pub fn init() -> crate::Result<DiscordGuard> {
-        // TODO: заменить на Discord Application ID (Client ID) для Quantum Launcher
         let dipc =
-            DiscordIpcClient::new("1190718475832918136").map_err(|e| {
+            DiscordIpcClient::new(Self::QUANTUM_DISCORD_CLIENT_ID).map_err(|e| {
                 crate::ErrorKind::OtherError(format!(
                     "Could not create Discord client {}",
                     e,

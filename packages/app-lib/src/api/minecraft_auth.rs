@@ -29,6 +29,15 @@ pub async fn offline_auth(
 }
 
 #[tracing::instrument]
+pub async fn ely_auth(
+    username: &str,
+    password: &str,
+) -> crate::Result<Credentials> {
+    let state = State::get().await?;
+    crate::state::ely_auth(username, password, &state.pool).await
+}
+
+#[tracing::instrument]
 pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
     let state = State::get().await?;
     let users = Credentials::get_active(&state.pool).await?;

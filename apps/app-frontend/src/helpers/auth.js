@@ -18,6 +18,18 @@ export async function offline_login(name) {
 }
 
 /**
+ * Authenticate a user with Ely.by (pirate auth server)
+ * @param {string} username
+ * @param {string} password
+ */
+export async function ely_login(username, password) {
+  return await invoke('plugin:auth|ely_login', {
+    username: username,
+    password: password,
+  })
+}
+
+/**
  * Authenticate a user with Hydra - part 1.
  * This begins the authentication flow quasi-synchronously.
  *

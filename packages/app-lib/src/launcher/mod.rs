@@ -548,6 +548,25 @@ pub async fn launch_minecraft(
         io::create_dir_all(&natives_dir).await?;
     }
 
+    let mut resolved_java_args: Vec<String> = java_args.to_vec();
+    if credentials.refresh_token == crate::state::ELYBY_MARKER {
+        resolved_java_args.push(
+            "-Dminecraft.api.auth.host=https://authserver.ely.by/authserver"
+                .to_string(),
+        );
+        resolved_java_args.push(
+            "-Dminecraft.api.account.host=https://authserver.ely.by/account"
+                .to_string(),
+        );
+        resolved_java_args.push(
+            "-Dminecraft.api.session.host=https://authserver.ely.by/session"
+                .to_string(),
+        );
+        resolved_java_args.push(
+            "-Dminecraft.api.services.host=https://api.ely.by".to_string(),
+        );
+    }
+
     command
         .args(
             args::get_jvm_arguments(
@@ -564,7 +583,7 @@ pub async fn launch_minecraft(
                 )?,
                 &version_jar,
                 *memory,
-                Vec::from(java_args),
+                resolved_java_args,
                 &java_version.architecture,
             )?
             .into_iter()
