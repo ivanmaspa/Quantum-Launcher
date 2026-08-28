@@ -16,7 +16,7 @@ mod error;
 mod event;
 mod launcher;
 mod logger;
-mod state;
+pub mod state;
 
 pub use api::*;
 pub use error::*;

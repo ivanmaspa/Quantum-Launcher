@@ -61,10 +61,10 @@ pub async fn discord_create_voice_channel(name: String) -> Result<String> {
     let cfg = load();
     let token = cfg
         .bot_token
-        .ok_or_else(|| theseus::ErrorKind::OtherError("Не задан токен бота Discord".to_string()))?;
+        .ok_or_else(|| theseus::Error::from(theseus::ErrorKind::OtherError("Не задан токен бота Discord".to_string())))?;
     let guild = cfg
         .guild_id
-        .ok_or_else(|| theseus::ErrorKind::OtherError("Не задан ID сервера Discord".to_string()))?;
+        .ok_or_else(|| theseus::Error::from(theseus::ErrorKind::OtherError("Не задан ID сервера Discord".to_string())))?;
     Ok(create_voice_channel(&token, &guild, &name).await?)
 }
 
@@ -73,12 +73,12 @@ pub async fn discord_move_to_voice(channel_id: String) -> Result<()> {
     let cfg = load();
     let token = cfg
         .bot_token
-        .ok_or_else(|| theseus::ErrorKind::OtherError("Не задан токен бота Discord".to_string()))?;
+        .ok_or_else(|| theseus::Error::from(theseus::ErrorKind::OtherError("Не задан токен бота Discord".to_string())))?;
     let guild = cfg
         .guild_id
-        .ok_or_else(|| theseus::ErrorKind::OtherError("Не задан ID сервера Discord".to_string()))?;
+        .ok_or_else(|| theseus::Error::from(theseus::ErrorKind::OtherError("Не задан ID сервера Discord".to_string())))?;
     let user = cfg
         .user_id
-        .ok_or_else(|| theseus::ErrorKind::OtherError("Не привязан пользователь Discord".to_string()))?;
+        .ok_or_else(|| theseus::Error::from(theseus::ErrorKind::OtherError("Не привязан пользователь Discord".to_string())))?;
     Ok(move_member_to_voice(&token, &guild, &user, &channel_id).await?)
 }

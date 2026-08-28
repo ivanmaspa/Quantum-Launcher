@@ -25,7 +25,7 @@ pub use self::java_globals::*;
 mod discord;
 pub use self::discord::*;
 
-mod discord_link;
+pub mod discord_link;
 pub use self::discord_link::*;
 
 mod minecraft_auth;
