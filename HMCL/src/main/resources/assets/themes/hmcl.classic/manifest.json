@@ -1,0 +1,120 @@
+{
+  "$schema": "https://schemas.glavo.site/hmcl/theme-pack/1.0.0",
+  "id": "hmcl.classic",
+  "version": "1.0.0",
+  "name": {
+    "default": "Classic",
+    "es": "Clásico",
+    "ja": "クラシック",
+    "ru": "Классическая",
+    "uk": "Класична",
+    "zh-Hans": "经典主题",
+    "zh-Hant": "經典主題",
+    "lzh": "舊觀"
+  },
+  "description": {
+    "default": "Classic Quantum launcher themes",
+    "es": "Temas clásicos del launcher Quantum",
+    "ja": "Quantum ランチャーのクラシックテーマ",
+    "ru": "Классические темы лаунчера Quantum",
+    "uk": "Класичні теми лаунчера Quantum",
+    "zh-Hans": "Quantum 启动器经典主题",
+    "zh-Hant": "Quantum 啟動器經典主題",
+    "lzh": "Quantum 啟動器之舊觀"
+  },
+  "authors": [
+    {
+      "name": {
+        "default": "Quantum",
+        "en-Qabs": "ꞀƆWH"
+      }
+    }
+  ],
+  "themes": [
+    {
+      "id": "2021-08-26",
+      "name": {
+        "default": "Current Theme",
+        "es": "Tema actual",
+        "ja": "現在のテーマ",
+        "ru": "Текущая тема",
+        "uk": "Поточна тема",
+        "zh-Hans": "当前主题",
+        "zh-Hant": "當前主題",
+        "lzh": "今觀"
+      },
+      "description": {
+        "default": "Quantum current theme",
+        "es": "Tema actual de Quantum",
+        "ja": "Quantum の現在のテーマ",
+        "ru": "Текущая тема Quantum",
+        "uk": "Поточна тема Quantum",
+        "zh-Hans": "Quantum 当前主题",
+        "zh-Hant": "Quantum 當前主題",
+        "lzh": "Quantum 之今觀"
+      },
+      "color": "#5C6BC0",
+      "brightness": "light",
+      "colorStyle": "fidelity",
+      "background": {
+        "type": "builtin",
+        "id": "2021-08-26",
+        "opacity": 1.0
+      },
+      "titleBar": {
+        "transparent": false
+      }
+    },
+    {
+      "id": "2016-02-25",
+      "name": "Quantum 3.3",
+      "description": {
+        "default": "Quantum 3.3 classic appearance",
+        "es": "Apariencia clásica de Quantum 3.3",
+        "ja": "Quantum 3.3 のクラシックな外観",
+        "ru": "Классический вид Quantum 3.3",
+        "uk": "Класичний вигляд Quantum 3.3",
+        "zh-Hans": "Quantum 3.3 经典外观",
+        "zh-Hant": "Quantum 3.3 經典外觀",
+        "lzh": "Quantum 3.3 之舊觀"
+      },
+      "color": "#5C6BC0",
+      "brightness": "light",
+      "colorStyle": "fidelity",
+      "background": {
+        "type": "builtin",
+        "id": "2016-02-25",
+        "opacity": 1.0
+      },
+      "titleBar": {
+        "transparent": true
+      }
+    },
+    {
+      "id": "2015-06-22",
+      "name": {
+        "default": "Quantum 2.3"
+      },
+      "description": {
+        "default": "Quantum 2.3 classic appearance",
+        "es": "Apariencia clásica de Quantum 2.3",
+        "ja": "Quantum 2.3 のクラシックな外観",
+        "ru": "Классический вид Quantum 2.3",
+        "uk": "Класичний вигляд Quantum 2.3",
+        "zh-Hans": "Quantum 2.3 经典外观",
+        "zh-Hant": "Quantum 2.3 經典外觀",
+        "lzh": "Quantum 2.3 之舊觀"
+      },
+      "color": "#E67E22",
+      "brightness": "light",
+      "colorStyle": "fidelity",
+      "background": {
+        "type": "builtin",
+        "id": "2015-06-22"
+      },
+      "titleBar": {
+        "transparent": false
+      }
+    }
+  ]
+}
