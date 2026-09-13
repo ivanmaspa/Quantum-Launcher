@@ -1212,7 +1212,7 @@ public class PersonalizationPage extends StackPane {
                     }
                 }
 
-                vbox.getChildren().add(new Label("Hello Minecraft! Launcher"));
+                vbox.getChildren().add(new Label("Quantum Launcher"));
 
                 fontPane.getContent().add(vbox);
             }

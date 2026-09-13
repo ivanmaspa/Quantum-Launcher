@@ -52,7 +52,7 @@ public class CrashReport {
     }
 
     public String getDisplayText() {
-        return "---- Hello Minecraft! Crash Report ----\n" +
+        return "---- Quantum Launcher Crash Report ----\n" +
                 "  Version: " + Metadata.VERSION + "\n" +
                 "  Time: " + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()) + "\n" +
                 "  Thread: " + thread + "\n" +

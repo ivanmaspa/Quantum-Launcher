@@ -143,6 +143,18 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
                         }
                     });
 
+                    AdvancedListItem elybyItem = new AdvancedListItem();
+                    elybyItem.getStyleClass().add("navigation-drawer-item");
+                    elybyItem.setTitle(i18n("account.methods.elyby"));
+                    elybyItem.setLeftIcon(SVG.PUBLIC);
+                    elybyItem.setOnAction(e -> {
+                        if (SettingsManager.isUserGameAccountsReadOnly()) {
+                            confirmOverwriteUserAccounts(() -> Controllers.dialog(new CreateAccountPane(Accounts.FACTORY_ELYBY)));
+                        } else {
+                            Controllers.dialog(new CreateAccountPane(Accounts.FACTORY_ELYBY));
+                        }
+                    });
+
                     VBox boxAuthServers = new VBox();
                     authServerItems = MappedObservableList.create(skinnable.authServersProperty(), server -> {
                         AdvancedListItem item = new AdvancedListItem();
@@ -183,18 +195,18 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
                         offlineItem.setDisable(true);
                         boxAuthServers.setDisable(true);
 
-                        boxMethods.getChildren().setAll(title, microsoftItem, wrapper);
+                        boxMethods.getChildren().setAll(title, microsoftItem, elybyItem, wrapper);
 
                         holder = FXUtils.onWeakChange(RESTRICTED, value -> {
                             if (!value) {
                                 holder = null;
                                 offlineItem.setDisable(false);
                                 boxAuthServers.setDisable(false);
-                                boxMethods.getChildren().setAll(title, microsoftItem, offlineItem, boxAuthServers);
+                                boxMethods.getChildren().setAll(title, microsoftItem, elybyItem, offlineItem, boxAuthServers);
                             }
                         });
                     } else {
-                        boxMethods.getChildren().setAll(title, microsoftItem, offlineItem, boxAuthServers);
+                        boxMethods.getChildren().setAll(title, microsoftItem, elybyItem, offlineItem, boxAuthServers);
                     }
                 }
 

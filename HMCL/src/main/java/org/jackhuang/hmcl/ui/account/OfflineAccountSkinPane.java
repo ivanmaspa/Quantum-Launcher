@@ -119,7 +119,8 @@ public class OfflineAccountSkinPane extends StackPane {
                 new MultiFileItem.Option<>(i18n("account.skin.type.alex"), Skin.Type.ALEX),
                 new MultiFileItem.Option<>(i18n("account.skin.type.local_file"), Skin.Type.LOCAL_FILE),
                 new MultiFileItem.Option<>(i18n("account.skin.type.little_skin"), Skin.Type.LITTLE_SKIN),
-                new MultiFileItem.Option<>(i18n("account.skin.type.csl_api"), Skin.Type.CUSTOM_SKIN_LOADER_API)
+                new MultiFileItem.Option<>(i18n("account.skin.type.csl_api"), Skin.Type.CUSTOM_SKIN_LOADER_API),
+                new MultiFileItem.Option<>(i18n("account.skin.type.elyby"), Skin.Type.ELYBY)
         ));
 
         modelCombobox.setConverter(stringConverter(model -> i18n("account.skin.model." + model.modelName)));
@@ -209,6 +210,15 @@ public class OfflineAccountSkinPane extends StackPane {
                         hint.setMaxWidth(Double.MAX_VALUE);
 
                         right.getChildren().add(hint);
+                        break;
+
+                    case ELYBY:
+                        HintPane elybyHint = new HintPane(MessageDialogPane.MessageType.INFO);
+                        elybyHint.setText(i18n("account.skin.type.elyby.hint"));
+
+                        elybyHint.setMaxWidth(Double.MAX_VALUE);
+
+                        right.getChildren().add(elybyHint);
                         break;
 
                     case LOCAL_FILE:

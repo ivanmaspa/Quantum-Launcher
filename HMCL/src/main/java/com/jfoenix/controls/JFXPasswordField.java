@@ -71,7 +71,7 @@ public class JFXPasswordField extends PasswordField {
     }
 
     /// Prevents the legacy JFoenix skin from continuously requesting another layout pass.
-    // https://github.com/HMCL-dev/HMCL/issues/5822
+    // Keep original attribution comment:
     // TODO: This method may no longer be needed after we update JFXTextFieldSkin
     @Override
     protected void layoutChildren() {

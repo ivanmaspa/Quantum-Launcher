@@ -152,6 +152,12 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
                 FXUtils.prepareOnMouseEnter(downloadItem, Controllers::prepareDownloadPage);
             }
 
+            // mcpelauncher Bedrock integration item in left sidebar
+            AdvancedListItem bedrockItem = new AdvancedListItem();
+            bedrockItem.setLeftIcon(SVG.GAMEPAD);
+            bedrockItem.setTitle(i18n("bedrock"));
+            bedrockItem.setOnAction(e -> Controllers.navigate(Controllers.getBedrockPage()));
+
             // fifth item in left sidebar
             AdvancedListItem launcherSettingsItem = new AdvancedListItem();
             launcherSettingsItem.setLeftIcon(SVG.SETTINGS);
@@ -195,6 +201,7 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
                     .add(gameListItem)
                     .add(gameItem)
                     .add(downloadItem)
+                    .add(bedrockItem)
                     .startCategory(i18n("settings.launcher.general").toUpperCase(Locale.ROOT))
                     .add(launcherSettingsItem)
                     .add(terracottaItem)

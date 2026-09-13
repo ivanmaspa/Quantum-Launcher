@@ -24,6 +24,8 @@ plugins {
 
 val projectConfig = PropertiesUtils.load(rootProject.file("config/project.properties").toPath())
 
+base { archivesName.set("Quantum") }
+
 val isOfficial = JenkinsUtils.IS_ON_CI || GitHubActionUtils.IS_ON_OFFICIAL_REPO
 
 val versionType = System.getenv("VERSION_TYPE") ?: if (isOfficial) "nightly" else "unofficial"

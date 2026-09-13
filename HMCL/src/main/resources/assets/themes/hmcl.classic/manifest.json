@@ -13,19 +13,19 @@
     "lzh": "舊觀"
   },
   "description": {
-    "default": "Classic HMCL launcher themes",
-    "es": "Temas clásicos del launcher HMCL",
-    "ja": "HMCL ランチャーのクラシックテーマ",
-    "ru": "Классические темы лаунчера HMCL",
-    "uk": "Класичні теми лаунчера HMCL",
-    "zh-Hans": "HMCL 启动器经典主题",
-    "zh-Hant": "HMCL 啟動器經典主題",
-    "lzh": "HMCL 啟動器之舊觀"
+    "default": "Classic Quantum launcher themes",
+    "es": "Temas clásicos del launcher Quantum",
+    "ja": "Quantum ランチャーのクラシックテーマ",
+    "ru": "Классические темы лаунчера Quantum",
+    "uk": "Класичні теми лаунчера Quantum",
+    "zh-Hans": "Quantum 启动器经典主题",
+    "zh-Hant": "Quantum 啟動器經典主題",
+    "lzh": "Quantum 啟動器之舊觀"
   },
   "authors": [
     {
       "name": {
-        "default": "HMCL",
+        "default": "Quantum",
         "en-Qabs": "ꞀƆWH"
       }
     }
@@ -44,14 +44,14 @@
         "lzh": "今觀"
       },
       "description": {
-        "default": "HMCL current theme",
-        "es": "Tema actual de HMCL",
-        "ja": "HMCL の現在のテーマ",
-        "ru": "Текущая тема HMCL",
-        "uk": "Поточна тема HMCL",
-        "zh-Hans": "HMCL 当前主题",
-        "zh-Hant": "HMCL 當前主題",
-        "lzh": "HMCL 之今觀"
+        "default": "Quantum current theme",
+        "es": "Tema actual de Quantum",
+        "ja": "Quantum の現在のテーマ",
+        "ru": "Текущая тема Quantum",
+        "uk": "Поточна тема Quantum",
+        "zh-Hans": "Quantum 当前主题",
+        "zh-Hant": "Quantum 當前主題",
+        "lzh": "Quantum 之今觀"
       },
       "color": "#5C6BC0",
       "brightness": "light",
@@ -67,16 +67,16 @@
     },
     {
       "id": "2016-02-25",
-      "name": "HMCL 3.3",
+      "name": "Quantum 3.3",
       "description": {
-        "default": "HMCL 3.3 classic appearance",
-        "es": "Apariencia clásica de HMCL 3.3",
-        "ja": "HMCL 3.3 のクラシックな外観",
-        "ru": "Классический вид HMCL 3.3",
-        "uk": "Класичний вигляд HMCL 3.3",
-        "zh-Hans": "HMCL 3.3 经典外观",
-        "zh-Hant": "HMCL 3.3 經典外觀",
-        "lzh": "HMCL 3.3 之舊觀"
+        "default": "Quantum 3.3 classic appearance",
+        "es": "Apariencia clásica de Quantum 3.3",
+        "ja": "Quantum 3.3 のクラシックな外観",
+        "ru": "Классический вид Quantum 3.3",
+        "uk": "Класичний вигляд Quantum 3.3",
+        "zh-Hans": "Quantum 3.3 经典外观",
+        "zh-Hant": "Quantum 3.3 經典外觀",
+        "lzh": "Quantum 3.3 之舊觀"
       },
       "color": "#5C6BC0",
       "brightness": "light",
@@ -93,17 +93,17 @@
     {
       "id": "2015-06-22",
       "name": {
-        "default": "HMCL 2.3"
+        "default": "Quantum 2.3"
       },
       "description": {
-        "default": "HMCL 2.3 classic appearance",
-        "es": "Apariencia clásica de HMCL 2.3",
-        "ja": "HMCL 2.3 のクラシックな外観",
-        "ru": "Классический вид HMCL 2.3",
-        "uk": "Класичний вигляд HMCL 2.3",
-        "zh-Hans": "HMCL 2.3 经典外观",
-        "zh-Hant": "HMCL 2.3 經典外觀",
-        "lzh": "HMCL 2.3 之舊觀"
+        "default": "Quantum 2.3 classic appearance",
+        "es": "Apariencia clásica de Quantum 2.3",
+        "ja": "Quantum 2.3 のクラシックな外観",
+        "ru": "Классический вид Quantum 2.3",
+        "uk": "Класичний вигляд Quantum 2.3",
+        "zh-Hans": "Quantum 2.3 经典外观",
+        "zh-Hant": "Quantum 2.3 經典外觀",
+        "lzh": "Quantum 2.3 之舊觀"
       },
       "color": "#E67E22",
       "brightness": "light",

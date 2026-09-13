@@ -41,6 +41,7 @@ import org.jackhuang.hmcl.auth.NoSelectedCharacterException;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccountFactory;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.auth.authlibinjector.BoundAuthlibInjectorAccountFactory;
+import org.jackhuang.hmcl.auth.elyby.ElyByAccountFactory;
 import org.jackhuang.hmcl.auth.microsoft.MicrosoftAccountFactory;
 import org.jackhuang.hmcl.auth.offline.OfflineAccountFactory;
 import org.jackhuang.hmcl.auth.yggdrasil.GameProfile;
@@ -97,8 +98,13 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
     public CreateAccountPane(AccountFactory<?> factory) {
         if (factory == null) {
             if (AccountListPage.RESTRICTED.get()) {
-                showMethodSwitcher = false;
-                factory = Accounts.FACTORY_MICROSOFT;
+                showMethodSwitcher = true;
+                String preferred = settings().preferredLoginTypeProperty().get();
+                if ("elyby".equals(preferred) || "microsoft".equals(preferred)) {
+                    factory = Accounts.getAccountFactory(preferred);
+                } else {
+                    factory = Accounts.FACTORY_ELYBY;
+                }
             } else {
                 showMethodSwitcher = true;
                 String preferred = settings().preferredLoginTypeProperty().get();
@@ -148,10 +154,11 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         }
 
         if (showMethodSwitcher) {
-            TabControl.Tab<?>[] tabs = new TabControl.Tab[Accounts.FACTORIES.size()];
+            List<AccountFactory<?>> factories = getAvailableFactories();
+            TabControl.Tab<?>[] tabs = new TabControl.Tab[factories.size()];
             TabControl.Tab<?> selected = null;
             for (int i = 0; i < tabs.length; i++) {
-                AccountFactory<?> f = Accounts.FACTORIES.get(i);
+                AccountFactory<?> f = factories.get(i);
                 tabs[i] = new TabControl.Tab<>(Accounts.getLoginType(f), Accounts.getLocalizedLoginTypeName(f));
                 tabs[i].setUserData(f);
                 if (factory == f) {
@@ -195,6 +202,15 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
     public CreateAccountPane(AuthlibInjectorServer authServer) {
         this(Accounts.getAccountFactoryByAuthlibInjectorServer(authServer));
+    }
+
+    /// Returns the account factories selectable in the create-account dialog.
+    /// In restricted mode only online methods (Microsoft, Ely.by) are available.
+    private static List<AccountFactory<?>> getAvailableFactories() {
+        if (AccountListPage.RESTRICTED.get()) {
+            return List.of(Accounts.FACTORY_MICROSOFT, Accounts.FACTORY_ELYBY);
+        }
+        return Accounts.FACTORIES;
     }
 
     private void onAccept() {
@@ -428,6 +444,15 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
                 HBox boxServers = new HBox(cboServers, noServersLabel, linksContainer, btnAddServer);
                 boxServers.setAlignment(Pos.CENTER_LEFT);
                 add(boxServers, 1, rowIndex);
+
+                rowIndex++;
+            }
+
+            if (factory instanceof ElyByAccountFactory) {
+                JFXHyperlink registerLink = new JFXHyperlink(i18n("account.methods.elyby.register"));
+                registerLink.setExternalLink("https://account.ely.by/register");
+                GridPane.setColumnSpan(registerLink, 2);
+                add(registerLink, 0, rowIndex);
 
                 rowIndex++;
             }

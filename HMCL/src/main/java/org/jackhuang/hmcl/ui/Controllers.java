@@ -45,6 +45,7 @@ import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.task.Task;
 import org.jackhuang.hmcl.task.TaskExecutor;
 import org.jackhuang.hmcl.ui.account.AccountListPage;
+import org.jackhuang.hmcl.ui.bedrock.BedrockPage;
 import org.jackhuang.hmcl.ui.animation.ContainerAnimations;
 import org.jackhuang.hmcl.ui.animation.Motion;
 import org.jackhuang.hmcl.ui.construct.*;
@@ -106,6 +107,7 @@ public final class Controllers {
     });
     private static LauncherSettingsPage settingsPage;
     private static Lazy<TerracottaPage> terracottaPage = new Lazy<>(TerracottaPage::new);
+    private static Lazy<BedrockPage> bedrockPage = new Lazy<>(BedrockPage::new);
 
     private Controllers() {
     }
@@ -193,6 +195,14 @@ public final class Controllers {
     @FXThread
     public static Node getTerracottaPage() {
         return terracottaPage.get();
+    }
+
+    /// Returns the singleton Bedrock page, the mcpelauncher integration page.
+    ///
+    /// @return the initialized Bedrock page
+    @FXThread
+    public static BedrockPage getBedrockPage() {
+        return bedrockPage.get();
     }
 
     /// Returns the initialized main-window decorator.
@@ -638,6 +648,7 @@ public final class Controllers {
         accountListPage = null;
         settingsPage = null;
         terracottaPage = null;
+        bedrockPage = null;
         decorator = null;
 
         FXUtils.shutdown();

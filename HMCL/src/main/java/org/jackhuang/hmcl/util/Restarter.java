@@ -30,11 +30,11 @@ public final class Restarter {
 
     /// Restart the current application.
     public static void restartSelf() throws IOException {
-        LOG.info("Restarting HMCL");
+        LOG.info("Restarting Quantum");
 
         Path thisJar = JarUtils.thisJarPath();
         if (thisJar == null) {
-            throw new IOException("Failed to find current HMCL location");
+            throw new IOException("Failed to find current Quantum Launcher location");
         }
 
         UpdateHandler.startJava(thisJar);

@@ -58,7 +58,8 @@ public record Skin(Type type, String cslApi, TextureModel textureModel, String l
         LOCAL_FILE,
         LITTLE_SKIN,
         CUSTOM_SKIN_LOADER_API,
-        YGGDRASIL_API;
+        YGGDRASIL_API,
+        ELYBY;
 
         public static Type fromStorage(String type) {
             return switch (type) {
@@ -76,6 +77,7 @@ public record Skin(Type type, String cslApi, TextureModel textureModel, String l
                 case "little_skin" -> LITTLE_SKIN;
                 case "custom_skin_loader_api" -> CUSTOM_SKIN_LOADER_API;
                 case "yggdrasil_api" -> YGGDRASIL_API;
+                case "elyby" -> ELYBY;
                 default -> null;
             };
         }
@@ -151,6 +153,41 @@ public record Skin(Type type, String cslApi, TextureModel textureModel, String l
                             } else {
                                 cape = null;
                             }
+
+                            return new LoadedSkin((TextureModel) result.get(0), skin, cape);
+                        });
+            case ELYBY:
+                String elybyUrl = "http://skinsystem.ely.by/textures/" + username;
+                return Task.composeAsync(() -> new GetTask(elybyUrl))
+                        .thenComposeAsync(json -> {
+                            JsonObject result = JsonUtils.GSON.fromJson(json, JsonObject.class);
+
+                            boolean hasSkin = result != null && result.has("SKIN");
+                            boolean hasCape = result != null && result.has("CAPE");
+
+                            TextureModel elybyModel = TextureModel.WIDE;
+                            if (hasSkin) {
+                                JsonObject skinObj = result.getAsJsonObject("SKIN");
+                                if (skinObj.has("metadata")) {
+                                    JsonObject meta = skinObj.getAsJsonObject("metadata");
+                                    if (meta.has("model") && "slim".equals(meta.get("model").getAsString())) {
+                                        elybyModel = TextureModel.SLIM;
+                                    }
+                                }
+                            }
+
+                            final TextureModel finalModel = elybyModel;
+
+                            return Task.allOf(
+                                    Task.supplyAsync(() -> finalModel),
+                                    !hasSkin ? Task.supplyAsync(() -> null) : new FetchBytesTask(result.getAsJsonObject("SKIN").get("url").getAsString()),
+                                    !hasCape ? Task.supplyAsync(() -> null) : new FetchBytesTask(result.getAsJsonObject("CAPE").get("url").getAsString())
+                            );
+                        }).thenApplyAsync(result -> {
+                            if (result == null) return null;
+
+                            Texture skin = result.get(1) != null ? Texture.loadTexture((InputStream) result.get(1)) : null;
+                            Texture cape = result.get(2) != null ? Texture.loadTexture((InputStream) result.get(2)) : null;
 
                             return new LoadedSkin((TextureModel) result.get(0), skin, cape);
                         });

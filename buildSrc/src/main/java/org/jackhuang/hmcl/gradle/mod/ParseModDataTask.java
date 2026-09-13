@@ -126,7 +126,7 @@ public abstract class ParseModDataTask extends DefaultTask {
 
         try (BufferedWriter writer = Files.newBufferedWriter(outputFile, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)) {
             writer.write("#\n" +
-                    "# Hello Minecraft! Launcher\n" +
+                    "# Quantum Launcher\n" +
                     "# Copyright (C) 2025 huangyuhui <huanghongxun2008@126.com> and contributors\n" +
                     "#\n" +
                     "# mcmod.cn\n" +
