@@ -61,7 +61,7 @@ public class FeedbackPage extends SpinnerPane {
 
         ComponentList feedback = new ComponentList();
         {
-            var github = LineButton.createExternalLinkButton("https://github.com/HMCL-dev/HMCL/issues/new/choose");
+            var github = LineButton.createExternalLinkButton("https://github.com/ivanmaspa/Quantum-Launcher/issues");
             github.setLargeTitle(true);
             github.setTitle(i18n("contact.feedback.github"));
             github.setSubtitle(i18n("contact.feedback.github.statement"));

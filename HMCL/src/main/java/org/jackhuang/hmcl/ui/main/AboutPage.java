@@ -83,7 +83,7 @@ public final class AboutPage extends SpinnerPane {
             claim.setTitle(i18n("about.claim"));
             claim.setSubtitle(i18n("about.claim.statement"));
 
-            var openSource = LineButton.createExternalLinkButton("https://github.com/HMCL-dev/HMCL");
+            var openSource = LineButton.createExternalLinkButton("https://github.com/ivanmaspa/Quantum-Launcher");
             openSource.setLargeTitle(true);
             openSource.setTitle(i18n("about.open_source"));
             openSource.setSubtitle(i18n("about.open_source.statement"));
