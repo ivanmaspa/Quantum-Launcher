@@ -18,14 +18,18 @@
 package org.jackhuang.hmcl.ui.instances;
 
 import com.jfoenix.controls.JFXButton;
+import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXListView;
 import com.jfoenix.controls.JFXTextField;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -36,17 +40,23 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import org.jackhuang.hmcl.download.DownloadProvider;
 import org.jackhuang.hmcl.game.*;
 import org.jackhuang.hmcl.addon.RemoteAddon;
 import org.jackhuang.hmcl.addon.RemoteAddonRepository;
+import org.jackhuang.hmcl.addon.mod.ModLoaderType;
+import org.jackhuang.hmcl.addon.repository.CurseForgeRemoteAddonRepository;
 import org.jackhuang.hmcl.addon.repository.ModrinthRemoteAddonRepository;
 import org.jackhuang.hmcl.setting.DownloadProviders;
+import org.jackhuang.hmcl.setting.SettingsManager;
+import org.jackhuang.hmcl.task.FileDownloadTask;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.task.Task;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
+import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.WeakListenerHolder;
 import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.ui.decorator.DecoratorPage;
@@ -57,14 +67,20 @@ import org.jackhuang.hmcl.util.versioning.GameVersionNumber;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.jackhuang.hmcl.ui.FXUtils.ignoreEvent;
 import static org.jackhuang.hmcl.ui.FXUtils.stringConverter;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.javafx.ExtendedProperties.selectedItemPropertyFor;
+import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 public class DownloadListPage extends Control implements DecoratorPage {
     protected final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>();
@@ -88,6 +104,15 @@ public class DownloadListPage extends Control implements DecoratorPage {
     protected RemoteAddonRepository repository;
     private final DownloadProvider downloadProvider;
 
+    private final ObservableSet<String> installedKeys = FXCollections.observableSet();
+    private boolean installSweepDone = false;
+
+    /// Whether the download list uses batch selection (checkboxes + "Download selected")
+    /// instead of the per-result direct download button.
+    private final BooleanProperty selectionMode = new SimpleBooleanProperty();
+    /// Project keys of the search results currently marked in batch selection mode.
+    private final ObservableSet<String> selectedKeys = FXCollections.observableSet();
+
     private Runnable retrySearch;
 
     public DownloadListPage(RemoteAddonRepository repository) {
@@ -99,10 +124,276 @@ public class DownloadListPage extends Control implements DecoratorPage {
         this.callback = callback;
         this.instanceSelection = instanceSelection;
         this.downloadProvider = DownloadProviders.getDownloadProvider();
+        this.selectionMode.bind(SettingsManager.settings().directAddonDownloadProperty().not());
+    }
+
+    public BooleanProperty selectionModeProperty() {
+        return selectionMode;
     }
 
     public DownloadProvider getDownloadProvider() {
         return downloadProvider;
+    }
+
+    /// Directly downloads the latest version of the given addon that is compatible with the
+    /// selected instance's game version and installed mod loader(s), without opening the addon page.
+    ///
+    /// @param addon the addon from the search results
+    public void quickDownload(RemoteAddon addon) {
+        HMCLGameInstance.Optional instanceReference = getInstanceOptional();
+        @Nullable HMCLGameInstance instance = instanceReference.instance();
+        if (instance == null) {
+            Controllers.showToast(i18n("download.direct.no_instance"));
+            return;
+        }
+
+        String subdirectory = switch (repository.getType()) {
+            case MOD -> "mods";
+            case RESOURCE_PACK -> "resourcepacks";
+            case SHADER_PACK -> "shaderpacks";
+            default -> null;
+        };
+        if (subdirectory == null) {
+            return;
+        }
+
+        String gameVersion = instance.getVersion().toString();
+        Set<ModLoaderType> loaders = repository.getType() == RemoteAddon.Type.MOD
+                ? instance.getModLoaders()
+                : Set.of();
+
+        // Resolve the latest compatible version silently; only the actual file download shows a dialog.
+        Task.supplyAsync(() -> {
+            RemoteAddon.Version latest;
+            try {
+                latest = resolveLatestVersion(addon, gameVersion, loaders);
+            } catch (IOException e) {
+                LOG.warning("Failed to fetch versions of " + addon.slug() + " for direct download", e);
+                latest = null;
+            }
+            return latest;
+        }).whenComplete(Schedulers.javafx(), (latest, exception) -> {
+            if (exception instanceof CancellationException) {
+                return;
+            }
+            if (exception != null || latest == null) {
+                Controllers.showToast(i18n("download.direct.no_version"));
+                return;
+            }
+
+            FileDownloadTask downloadTask = createFileDownloadTask(instance, subdirectory, latest);
+
+            Task<Void> download = Task.composeAsync(() -> downloadTask)
+                    .whenComplete(Schedulers.javafx(), (result, downloadException) -> {
+                        if (downloadException instanceof CancellationException) {
+                            return;
+                        }
+                        if (downloadException != null) {
+                            Controllers.dialog(DownloadProviders.localizeErrorMessage(downloadException), i18n("install.failed.downloading"), MessageDialogPane.MessageType.ERROR);
+                        } else {
+                            installedKeys.add(latest.projectId());
+                            Controllers.showToast(i18n("install.success"));
+                        }
+                    });
+            Controllers.taskDialog(download, i18n("message.downloading"), TaskCancellationAction.NORMAL);
+        }).start();
+    }
+
+    /// Returns the latest version of the given addon that is compatible with the given
+    /// game version and installed mod loader(s).
+    ///
+    /// @param addon the addon from the search results
+    /// @param gameVersion the instance's Minecraft version
+    /// @param loaders the loaders to filter by, or an empty set for resource/shader packs
+    /// @return the latest compatible version, or {@code null} if none matches
+    private @Nullable RemoteAddon.Version resolveLatestVersion(RemoteAddon addon, String gameVersion, Set<ModLoaderType> loaders) throws IOException {
+        try (Stream<RemoteAddon.Version> versions = addon.data().loadVersions(repository, downloadProvider)) {
+            return versions
+                    .filter(version -> version.gameVersions().isEmpty() || version.gameVersions().contains(gameVersion))
+                    .filter(version -> loaders.isEmpty() || version.loaders().stream().anyMatch(loader ->
+                            loader.type() instanceof ModLoaderType modLoaderType && loaders.contains(modLoaderType)))
+                    .max(Comparator.comparing(RemoteAddon.Version::datePublished)
+                            .thenComparing(version -> version.versionType(), Comparator.reverseOrder()))
+                    .orElse(null);
+        }
+    }
+
+    /// Creates a file download task that saves the given add-on version into the instance's
+    /// {@code mods}/{@code resourcepacks}/{@code shaderpacks} directory.
+    ///
+    /// @param instance the selected instance
+    /// @param subdirectory the target subdirectory of the run directory
+    /// @param version the add-on version to download
+    /// @return the configured file download task
+    private FileDownloadTask createFileDownloadTask(HMCLGameInstance instance, String subdirectory, RemoteAddon.Version version) {
+        Path dest = instance.getRunDirectory().resolve(subdirectory).resolve(version.file().filename());
+        FileDownloadTask downloadTask = new FileDownloadTask(
+                downloadProvider.injectURLWithCandidates(version.file().url()),
+                dest,
+                version.file().getIntegrityCheck());
+        downloadTask.setName(version.name() + ' ' + version.version());
+        return downloadTask;
+    }
+
+    /// Downloads all add-ons currently marked with a checkbox in batch selection mode.
+    /// Versions are resolved silently at once, then every matching file is downloaded
+    /// (shown in a single progress dialog) and marked as installed on success.
+    public void downloadSelected() {
+        HMCLGameInstance.Optional instanceReference = getInstanceOptional();
+        @Nullable HMCLGameInstance instance = instanceReference.instance();
+        if (instance == null) {
+            Controllers.showToast(i18n("download.direct.no_instance"));
+            return;
+        }
+
+        String subdirectory = switch (repository.getType()) {
+            case MOD -> "mods";
+            case RESOURCE_PACK -> "resourcepacks";
+            case SHADER_PACK -> "shaderpacks";
+            default -> null;
+        };
+        if (subdirectory == null) {
+            return;
+        }
+
+        String gameVersion = instance.getVersion().toString();
+        Set<ModLoaderType> loaders = repository.getType() == RemoteAddon.Type.MOD
+                ? instance.getModLoaders()
+                : Set.of();
+
+        List<RemoteAddon> addons = items.stream()
+                .filter(addon -> addon != null && selectedKeys.contains(projectKey(addon)))
+                .collect(Collectors.toList());
+        if (addons.isEmpty()) {
+            return;
+        }
+
+        // Resolve all versions silently first, then download the matching files together.
+        Task.supplyAsync(() -> {
+            List<RemoteAddon.Version> versions = new ArrayList<>();
+            for (RemoteAddon addon : addons) {
+                RemoteAddon.Version latest;
+                try {
+                    latest = resolveLatestVersion(addon, gameVersion, loaders);
+                } catch (IOException e) {
+                    LOG.warning("Failed to fetch versions of " + addon.slug() + " for selected download", e);
+                    continue;
+                }
+                if (latest != null) {
+                    versions.add(latest);
+                }
+            }
+            return versions;
+        }).whenComplete(Schedulers.javafx(), (versions, exception) -> {
+            if (exception instanceof CancellationException) {
+                return;
+            }
+            if (exception != null) {
+                Controllers.dialog(DownloadProviders.localizeErrorMessage(exception), i18n("install.failed.downloading"), MessageDialogPane.MessageType.ERROR);
+                return;
+            }
+            if (versions.isEmpty()) {
+                Controllers.showToast(i18n("download.direct.no_version"));
+                return;
+            }
+
+            List<FileDownloadTask> fileTasks = versions.stream()
+                    .map(version -> createFileDownloadTask(instance, subdirectory, version))
+                    .collect(Collectors.toList());
+            Task<?> download = Task.allOf(fileTasks);
+            download.whenComplete(Schedulers.javafx(), (result, downloadException) -> {
+                if (downloadException instanceof CancellationException) {
+                    return;
+                }
+                if (downloadException != null) {
+                    Controllers.dialog(DownloadProviders.localizeErrorMessage(downloadException), i18n("install.failed.downloading"), MessageDialogPane.MessageType.ERROR);
+                    return;
+                }
+                selectedKeys.removeAll(versions.stream().map(RemoteAddon.Version::projectId).collect(Collectors.toList()));
+                for (RemoteAddon.Version version : versions) {
+                    installedKeys.add(version.projectId());
+                }
+                Controllers.showToast(i18n("install.success"));
+            });
+            Controllers.taskDialog(download, i18n("message.downloading"), TaskCancellationAction.NORMAL);
+        }).start();
+    }
+
+    /// Returns a key identifying the given addon in {@link #installedKeys}.
+    /// Must equal {@link RemoteAddon.Version#projectId()} so that a downloaded or locally
+    /// matched version can hide the corresponding search result's button:
+    /// CurseForge uses the numeric project id, Modrinth uses the project id (not the slug).
+    ///
+    /// @param addon the addon from the search results
+    /// @return the project key
+    private static String projectKey(RemoteAddon addon) {
+        if (addon.data() instanceof CurseForgeRemoteAddonRepository.CurseAddon curse) {
+            return Integer.toString(curse.id());
+        }
+        if (addon.data() instanceof ModrinthRemoteAddonRepository.ProjectSearchResult modrinth) {
+            return modrinth.projectId();
+        }
+        return addon.slug();
+    }
+
+    /// Scans the locally installed addons of the selected instance and marks matching search
+    /// results as already installed, so their download button is hidden. Runs at most once.
+    public void sweepInstalled() {
+        if (installSweepDone) {
+            return;
+        }
+        installSweepDone = true;
+
+        HMCLGameInstance.Optional instanceReference = getInstanceOptional();
+        @Nullable HMCLGameInstance instance = instanceReference.instance();
+        if (instance == null) {
+            return;
+        }
+
+        List<Path> localFiles;
+        try {
+            localFiles = switch (repository.getType()) {
+                case MOD -> instance.getModManager().getLocalFiles().stream()
+                        .map(org.jackhuang.hmcl.addon.LocalAddonFile::getFile)
+                        .toList();
+                case RESOURCE_PACK -> listAddonFiles(instance.getResourcePackDirectory());
+                case SHADER_PACK -> listAddonFiles(instance.getRunDirectory().resolve("shaderpacks"));
+                default -> List.of();
+            };
+        } catch (IOException e) {
+            LOG.warning("Failed to list local addons", e);
+            return;
+        }
+
+        Task.supplyAsync(() -> {
+            Set<String> keys = new HashSet<>();
+            for (Path file : localFiles) {
+                try {
+                    repository.getRemoteVersionByLocalFile(file)
+                            .map(RemoteAddon.Version::projectId)
+                            .ifPresent(keys::add);
+                } catch (IOException e) {
+                    LOG.warning("Failed to match local addon " + file + " in " + repository.getBaseUrl(), e);
+                }
+            }
+            return keys;
+        }).whenComplete(Schedulers.javafx(), (keys, exception) -> {
+            if (exception == null && keys != null) {
+                installedKeys.addAll(keys);
+            }
+        }).start();
+    }
+
+    private static List<Path> listAddonFiles(Path directory) {
+        if (!Files.isDirectory(directory)) {
+            return List.of();
+        }
+        try (Stream<Path> files = Files.list(directory)) {
+            return files.filter(Files::isRegularFile).toList();
+        } catch (IOException e) {
+            LOG.warning("Failed to list addons in " + directory, e);
+            return List.of();
+        }
     }
 
     public ObservableList<Node> getActions() {
@@ -128,6 +419,8 @@ public class DownloadListPage extends Control implements DecoratorPage {
             @Nullable HMCLGameInstance repositorySelection = repository.getSelectedInstance();
             selectedInstance.set(repositorySelection != null ? repositorySelection.getId() : null);
         }
+
+        sweepInstalled();
     }
 
     public boolean isFailed() {
@@ -497,7 +790,24 @@ public class DownloadListPage extends Control implements DecoratorPage {
                     JFXButton searchButton = FXUtils.newRaisedButton(i18n("search"));
                     searchButton.setOnAction(searchAction);
 
-                    actions.appendList(FXCollections.observableArrayList(firstPageButton, previousPageButton, pageDescription, nextPageButton, lastPageButton, placeholder, searchButton));
+                    JFXButton modeToggleButton = FXUtils.newBorderButton(null);
+                    modeToggleButton.textProperty().bind(Bindings.createStringBinding(() ->
+                                    i18n(getSkinnable().selectionModeProperty().get()
+                                            ? "download.direct.mode.direct"
+                                            : "download.direct.mode.selected"),
+                            getSkinnable().selectionModeProperty()));
+                    modeToggleButton.setOnAction(e -> SettingsManager.settings().directAddonDownloadProperty()
+                            .set(!SettingsManager.settings().directAddonDownloadProperty().get()));
+
+                    JFXButton batchDownloadButton = FXUtils.newRaisedButton(i18n("download.direct.selected"));
+                    batchDownloadButton.disableProperty().bind(Bindings.createBooleanBinding(
+                            () -> getSkinnable().selectedKeys.isEmpty(),
+                            getSkinnable().selectedKeys));
+                    batchDownloadButton.visibleProperty().bind(getSkinnable().selectionModeProperty());
+                    batchDownloadButton.managedProperty().bind(getSkinnable().selectionModeProperty());
+                    batchDownloadButton.setOnAction(e -> getSkinnable().downloadSelected());
+
+                    actions.appendList(FXCollections.observableArrayList(firstPageButton, previousPageButton, pageDescription, nextPageButton, lastPageButton, placeholder, modeToggleButton, batchDownloadButton, searchButton));
                     actions.appendList(control.actions);
                     Bindings.bindContent(actionsBox.getChildren(), actions.getAggregatedList());
                 }
@@ -550,6 +860,7 @@ public class DownloadListPage extends Control implements DecoratorPage {
 
                     private final TwoLineListItem content = new TwoLineListItem();
                     private final ImageContainer imageContainer = new ImageContainer(40);
+                    private final JFXCheckBox selectionCheckBox = new JFXCheckBox();
 
                     {
                         setPadding(PADDING);
@@ -561,7 +872,59 @@ public class DownloadListPage extends Control implements DecoratorPage {
 
                         imageContainer.setMouseTransparent(true);
 
-                        container.getChildren().setAll(imageContainer, content);
+                        JFXButton downloadButton = FXUtils.newToggleButton4(SVG.DOWNLOAD);
+                        downloadButton.setOnAction(e -> {
+                            RemoteAddon item = getItem();
+                            if (item != null)
+                                getSkinnable().quickDownload(item);
+                        });
+                        FXUtils.installFastTooltip(downloadButton, i18n("download.direct"));
+                        downloadButton.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> e.consume());
+
+                        JFXCheckBox selectionCheckBox = this.selectionCheckBox;
+                        selectionCheckBox.getStyleClass().add("fit-width");
+                        FXUtils.installFastTooltip(selectionCheckBox, i18n("download.direct.select"));
+                        selectionCheckBox.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> e.consume());
+                        selectionCheckBox.setCursor(Cursor.HAND);
+
+                        selectionCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+                            RemoteAddon item = getItem();
+                            if (item != null) {
+                                String key = projectKey(item);
+                                if (newValue) {
+                                    getSkinnable().selectedKeys.add(key);
+                                } else {
+                                    getSkinnable().selectedKeys.remove(key);
+                                }
+                            }
+                        });
+                        getSkinnable().selectedKeys.addListener((SetChangeListener<String>) change -> {
+                            RemoteAddon item = getItem();
+                            if (item != null) {
+                                String key = projectKey(item);
+                                if (key.equals(change.getElementAdded()) || key.equals(change.getElementRemoved())) {
+                                    selectionCheckBox.selectedProperty().set(getSkinnable().selectedKeys.contains(key));
+                                }
+                            }
+                        });
+
+                        boolean quickDownloadable = switch (getSkinnable().repository.getType()) {
+                            case MOD, RESOURCE_PACK, SHADER_PACK -> true;
+                            default -> false;
+                        };
+                        BooleanBinding installedOrAbsent = Bindings.createBooleanBinding(
+                                () -> !quickDownloadable || getItem() == null
+                                        || getSkinnable().installedKeys.contains(projectKey(getItem())),
+                                getSkinnable().installedKeys, itemProperty());
+                        downloadButton.visibleProperty().bind(Bindings.createBooleanBinding(
+                                () -> !getSkinnable().selectionModeProperty().get() && !installedOrAbsent.get(),
+                                getSkinnable().selectionModeProperty(), installedOrAbsent));
+                        selectionCheckBox.visibleProperty().bind(Bindings.createBooleanBinding(
+                                () -> getSkinnable().selectionModeProperty().get() && !installedOrAbsent.get(),
+                                getSkinnable().selectionModeProperty(), installedOrAbsent));
+                        selectionCheckBox.managedProperty().bind(selectionCheckBox.visibleProperty());
+
+                        container.getChildren().setAll(imageContainer, content, selectionCheckBox, downloadButton);
                         HBox.setHgrow(content, Priority.ALWAYS);
 
                         this.graphic = new RipplerContainer(container);
@@ -599,6 +962,8 @@ public class DownloadListPage extends Control implements DecoratorPage {
                                             ? LAST_PADDING
                                             : PADDING
                             );
+
+                            selectionCheckBox.selectedProperty().set(getSkinnable().selectedKeys.contains(projectKey(item)));
 
                             ModTranslations.Mod mod = ModTranslations.getTranslationsByAddonType(getSkinnable().repository.getType()).getModByCurseForgeId(item.slug());
                             content.setTitle(mod != null && I18n.isUseChinese() ? mod.getDisplayName() : item.title());

@@ -30,6 +30,9 @@ import java.util.Objects;
 /// Identifies a built-in launcher background wallpaper.
 @NotNullByDefault
 public enum BuiltinBackground {
+    /// Default Quantum Launcher wallpaper (from the launcher author's setup).
+    QUANTUM_DEFAULT("quantum-default", "#5C6BC0"),
+
     /// Built-in launcher wallpaper from 2021-08-26.
     WALLPAPER_2021_08_26("2021-08-26", "#3F6AA2"),
 
@@ -41,7 +44,7 @@ public enum BuiltinBackground {
     ;
 
     /// Built-in wallpaper used when a wallpaper ID is missing or unsupported.
-    public static final BuiltinBackground FALLBACK = WALLPAPER_2021_08_26;
+    public static final BuiltinBackground FALLBACK = QUANTUM_DEFAULT;
 
     /// Built-in wallpapers keyed by serialized wallpaper ID.
     public static final @Unmodifiable Map<String, BuiltinBackground> BUILTIN_BACKGROUNDS;

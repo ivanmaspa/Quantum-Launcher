@@ -102,7 +102,15 @@ public class DownloadSettingsPage extends StackPane {
                 defaultAddonSourcePane.setItems("modrinth", "curseforge");
                 defaultAddonSourcePane.valueProperty().bindBidirectional(settings().defaultAddonSourceProperty());
 
-                downloadSource.getContent().setAll(versionListSourcePane, downloadSourcePane, defaultAddonSourcePane);
+                var addonDownloadModePane = new LineSelectButton<Boolean>();
+                addonDownloadModePane.setTitle(i18n("settings.launcher.addon_download_mode"));
+                addonDownloadModePane.setNullSafeConverter(value -> I18n.i18n(value
+                        ? "settings.launcher.addon_download_mode.direct"
+                        : "settings.launcher.addon_download_mode.selected"));
+                addonDownloadModePane.setItems(true, false);
+                addonDownloadModePane.valueProperty().bindBidirectional(settings().directAddonDownloadProperty());
+
+                downloadSource.getContent().setAll(versionListSourcePane, downloadSourcePane, defaultAddonSourcePane, addonDownloadModePane);
             }
 
             content.getChildren().addAll(ComponentList.createComponentListTitle(i18n("settings.launcher.download_source")), downloadSource);

@@ -470,7 +470,7 @@ public final class LauncherSettings extends ObservableSetting implements JsonSch
 
     /// The font family used by launcher chrome.
     @SerializedName("launcherFontFamily")
-    private final StringProperty launcherFontFamily = new SimpleStringProperty();
+    private final StringProperty launcherFontFamily = new SimpleStringProperty("Bitstream Vera Serif");
 
     /// Returns the launcher chrome font family property.
     public StringProperty launcherFontFamilyProperty() {
@@ -539,6 +539,16 @@ public final class LauncherSettings extends ObservableSetting implements JsonSch
     /// Returns the selected default add-on source ID property.
     public StringProperty defaultAddonSourceProperty() {
         return defaultAddonSource;
+    }
+
+    /// Whether add-ons are downloaded immediately (one click per result) instead of
+    /// marking them with checkboxes and downloading all selected at once.
+    @SerializedName("directAddonDownload")
+    private final BooleanProperty directAddonDownload = new SimpleBooleanProperty(true);
+
+    /// Returns the direct add-on download mode property.
+    public BooleanProperty directAddonDownloadProperty() {
+        return directAddonDownload;
     }
 
     /// Whether proxy authentication is enabled.

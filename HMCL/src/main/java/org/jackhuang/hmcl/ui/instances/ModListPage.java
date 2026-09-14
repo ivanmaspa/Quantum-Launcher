@@ -25,6 +25,7 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
@@ -528,11 +529,40 @@ public final class ModListPage extends ListPageBase<ModListPage.ModInfoObject> i
                 });
 
                 listView.setOnContextMenuRequested(event -> {
-                    ModListPage.ModInfoObject selectedItem = listView.getSelectionModel().getSelectedItem();
-                    if (selectedItem != null && listView.getSelectionModel().getSelectedItems().size() == 1) {
-                        listView.getSelectionModel().clearSelection();
-                        Controllers.dialog(new ModListPage.ModInfoDialog(selectedItem));
+                    Node node = event.getPickResult().getIntersectedNode();
+                    while (node != null && !(node instanceof ModListPage.ModInfoListCell)) {
+                        node = node.getParent();
                     }
+                    if (!(node instanceof ModListPage.ModInfoListCell cell) || cell.isEmpty()) {
+                        return;
+                    }
+
+                    ModListPage.ModInfoObject clicked = cell.getItem();
+                    ObservableList<ModInfoObject> selected = listView.getSelectionModel().getSelectedItems();
+                    // Right-clicking a row not part of the current selection targets just that row.
+                    List<ModInfoObject> targets = selected.contains(clicked) && selected.size() > 1
+                            ? new ArrayList<>(selected)
+                            : List.of(clicked);
+
+                    ContextMenu contextMenu = new ContextMenu();
+                    if (targets.size() == 1) {
+                        MenuItem infoItem = new MenuItem(i18n("mods.info"));
+                        infoItem.setOnAction(e -> Controllers.dialog(new ModInfoDialog(clicked)));
+                        contextMenu.getItems().add(infoItem);
+                    }
+                    MenuItem enableItem = new MenuItem(i18n("mods.enable"));
+                    enableItem.setOnAction(e -> skinnable.enableSelected(FXCollections.observableArrayList(targets)));
+                    MenuItem disableItem = new MenuItem(i18n("mods.disable"));
+                    disableItem.setOnAction(e -> skinnable.disableSelected(FXCollections.observableArrayList(targets)));
+                    contextMenu.getItems().addAll(enableItem, disableItem, new SeparatorMenuItem());
+                    MenuItem removeItem = new MenuItem(i18n("button.remove"));
+                    removeItem.setOnAction(e -> Controllers.confirm(i18n("button.remove.confirm"), i18n("button.remove"), () -> {
+                        skinnable.removeSelected(FXCollections.observableArrayList(targets));
+                    }, null));
+                    contextMenu.getItems().add(removeItem);
+
+                    contextMenu.show(listView, event.getScreenX(), event.getScreenY());
+                    event.consume();
                 });
 
                 // ListViewBehavior would consume ESC pressed event, preventing us from handling it
