@@ -39,6 +39,7 @@ import java.util.*;
 
 import static org.jackhuang.hmcl.ui.FXUtils.runInFX;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
+import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 public class InstallerListPage extends ListPageBase<InstallerItem> {
     private final WeakListenerHolder listenerHolder = new WeakListenerHolder();
@@ -101,7 +102,17 @@ public class InstallerListPage extends ListPageBase<InstallerItem> {
             }
 
             component.setOnInstall(() -> {
-                Controllers.getDecorator().startWizard(new UpdateInstallerWizardProvider(gameInstance, component.getComponentType(), libraryVersion));
+                Controllers.taskDialog(
+                        AutoWorldBackup.createBackupIfNeeded(gameInstance)
+                                .whenComplete(Schedulers.javafx(), (result, exception) -> {
+                                    if (exception != null) {
+                                        LOG.warning("Failed to create automatic world backup", exception);
+                                    }
+                                    Controllers.getDecorator().startWizard(
+                                            new UpdateInstallerWizardProvider(gameInstance, component.getComponentType(), libraryVersion));
+                                }),
+                        i18n("quantum.worldbackup.auto.name"),
+                        TaskCancellationAction.NO_CANCEL);
             });
 
             component.setOnRemove(() -> repository.getDependency().updateInstanceAsync(
@@ -156,9 +167,10 @@ public class InstallerListPage extends ListPageBase<InstallerItem> {
         }
 
         HMCLGameRepository repository = gameInstance.getRepository();
-        Task<?> task = repository.getDependency().updateInstanceAsync(
-                gameInstance.getId(),
-                publishedInstance -> repository.getDependency().installComponentLocalAsync(publishedInstance, file));
+        Task<?> task = AutoWorldBackup.createBackupIfNeeded(gameInstance)
+                .thenComposeAsync(() -> repository.getDependency().updateInstanceAsync(
+                        gameInstance.getId(),
+                        publishedInstance -> repository.getDependency().installComponentLocalAsync(publishedInstance, file)));
         task.setName(i18n("install.installer.install_offline"));
         TaskExecutor executor = task.executor(new TaskListener() {
             @Override

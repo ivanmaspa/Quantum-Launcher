@@ -41,6 +41,7 @@ import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
+import org.jackhuang.hmcl.ui.main.WhatNewPage;
 import org.jackhuang.hmcl.ui.WindowsNativeUtils;
 import org.jackhuang.hmcl.ui.animation.AnimationUtils;
 import org.jackhuang.hmcl.upgrade.UpdateChecker;
@@ -149,6 +150,12 @@ public final class Launcher extends Application {
 
                 WindowsNativeUtils.installWindowsAppUserModelRelaunchProperties(primaryStage);
                 primaryStage.show();
+                // Run after the stage is displayed so the dialog overlays the fully-rendered window.
+                Platform.runLater(() -> {
+                    if (QuantumMeta.shouldShowWhatNew()) {
+                        Controllers.dialog(new WhatNewPage());
+                    }
+                });
             });
         } catch (Throwable e) {
             CRASH_REPORTER.uncaughtException(Thread.currentThread(), e);

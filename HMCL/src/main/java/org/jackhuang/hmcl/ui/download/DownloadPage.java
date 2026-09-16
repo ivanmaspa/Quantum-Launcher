@@ -43,6 +43,7 @@ import org.jackhuang.hmcl.ui.WeakListenerHolder;
 import org.jackhuang.hmcl.ui.animation.TransitionPane;
 import org.jackhuang.hmcl.ui.construct.AdvancedListBox;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
+import org.jackhuang.hmcl.ui.construct.PageAware;
 import org.jackhuang.hmcl.ui.construct.TabHeader;
 import org.jackhuang.hmcl.ui.construct.Validator;
 import org.jackhuang.hmcl.ui.decorator.DecoratorAnimatedPage;
@@ -68,7 +69,7 @@ import static org.jackhuang.hmcl.ui.FXUtils.runInFX;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage {
+public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage, PageAware {
     public static final org.jackhuang.hmcl.ui.instances.DownloadPage.DownloadCallback FOR_MOD =
             (downloadProvider, repository, version, mod, file) -> download(downloadProvider, repository, version, file, "mods");
     public static final org.jackhuang.hmcl.ui.instances.DownloadPage.DownloadCallback FOR_RESOURCE_PACK =
@@ -207,6 +208,16 @@ public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage
     @Override
     public ReadOnlyObjectProperty<State> stateProperty() {
         return state.getReadOnlyProperty();
+    }
+
+    @Override
+    public void onPageShown() {
+        tab.onPageShown();
+    }
+
+    @Override
+    public void onPageHidden() {
+        tab.onPageHidden();
     }
 
     public void showGameDownloads() {

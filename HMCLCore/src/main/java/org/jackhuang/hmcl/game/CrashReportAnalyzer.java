@@ -256,4 +256,46 @@ public final class CrashReportAnalyzer {
             return -1;
         }
     }
+
+    /// Returns a plain-English human-readable explanation of the crash cause for the given
+    /// result, or `null` when no explanation is available.
+    public static @Nullable String getHumanExplanation(Result result) {
+        return switch (result.rule()) {
+            case OUT_OF_MEMORY ->
+                    "The game ran out of memory (RAM). Try increasing the memory allocation "
+                            + "in launcher settings, or remove heavy resource packs and mods.";
+            case MEMORY_EXCEEDED ->
+                    "The JVM could not allocate enough system memory. Try increasing the maximum "
+                            + "heap size, or close other programs to free RAM.";
+            case TOO_OLD_JAVA -> {
+                int expected = Integer.parseInt(result.matcher().group("expected"));
+                yield "This mod requires Java " + getJavaVersionFromMajorVersion(expected)
+                        + " or newer. Update your Java version in launcher settings.";
+            }
+            case NEED_JDK11 ->
+                    "This mod requires Java 11 or newer. Your current Java version is too old. "
+                            + "Install Java 11+ and select it in the launcher.";
+            case JAVA_VERSION_IS_TOO_HIGH ->
+                    "Your Java version is too new for this mod. Try using Java 17 or Java 21 "
+                            + "instead, or update the mod to a version compatible with your Java.";
+            case JDK_9 ->
+                    "This mod requires Java 8. Java 9 and newer have breaking changes that this "
+                            + "mod does not support. Use Java 8 for this modpack.";
+            case JVM_32BIT ->
+                    "Your JVM is 32-bit. Modern Minecraft with mods requires a 64-bit JVM. "
+                            + "Install a 64-bit Java and select it in the launcher.";
+            case MODLAUNCHER_8 ->
+                    "A mod is incompatible with the current ModLauncher version. Try updating "
+                            + "your mods or the mod loader to a newer version.";
+            case MOD_FILES_ARE_DECOMPRESSED ->
+                    "One or more mod files have been extracted/unzipped. Mod files must remain "
+                            + "as .jar archives. Re-download the affected mods.";
+            case DUPLICATED_MOD -> {
+                String name = result.matcher().group("name");
+                yield "A duplicate mod was found: " + name
+                        + ". Remove the duplicate copy from the mods folder.";
+            }
+            default -> null;
+        };
+    }
 }

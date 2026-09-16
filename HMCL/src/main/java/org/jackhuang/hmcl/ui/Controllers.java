@@ -52,6 +52,7 @@ import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane.MessageType;
 import org.jackhuang.hmcl.ui.decorator.Decorator;
 import org.jackhuang.hmcl.ui.download.DownloadPage;
+import org.jackhuang.hmcl.ui.main.DiagnosticsPage;
 import org.jackhuang.hmcl.ui.main.LauncherSettingsPage;
 import org.jackhuang.hmcl.ui.main.RootPage;
 import org.jackhuang.hmcl.ui.terracotta.TerracottaPage;
@@ -108,6 +109,7 @@ public final class Controllers {
     private static LauncherSettingsPage settingsPage;
     private static Lazy<TerracottaPage> terracottaPage = new Lazy<>(TerracottaPage::new);
     private static Lazy<BedrockPage> bedrockPage = new Lazy<>(BedrockPage::new);
+    private static Lazy<DiagnosticsPage> diagnosticsPage = new Lazy<>(DiagnosticsPage::new);
 
     private Controllers() {
     }
@@ -203,6 +205,14 @@ public final class Controllers {
     @FXThread
     public static BedrockPage getBedrockPage() {
         return bedrockPage.get();
+    }
+
+    /// Returns the singleton diagnostics page.
+    ///
+    /// @return the initialized diagnostics page
+    @FXThread
+    public static DiagnosticsPage getDiagnosticsPage() {
+        return diagnosticsPage.get();
     }
 
     /// Returns the initialized main-window decorator.

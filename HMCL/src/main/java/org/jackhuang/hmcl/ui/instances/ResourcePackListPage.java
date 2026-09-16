@@ -24,6 +24,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -56,6 +57,9 @@ import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.WeakListenerHolder;
 import org.jackhuang.hmcl.ui.animation.ContainerAnimations;
 import org.jackhuang.hmcl.ui.animation.TransitionPane;
+import org.jackhuang.hmcl.ui.construct.IconedMenuItem;
+import org.jackhuang.hmcl.ui.construct.MenuSeparator;
+import org.jackhuang.hmcl.ui.construct.PopupMenu;
 import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.util.*;
 import org.jackhuang.hmcl.util.javafx.ItemPropertyAsyncCache;
@@ -430,11 +434,39 @@ public final class ResourcePackListPage extends ListPageBase<ResourcePackListPag
                 Bindings.bindContent(listView.getItems(), control.getItems());
 
                 listView.setOnContextMenuRequested(event -> {
-                    ResourcePackInfoObject selectedItem = listView.getSelectionModel().getSelectedItem();
-                    if (selectedItem != null && listView.getSelectionModel().getSelectedItems().size() == 1) {
-                        listView.getSelectionModel().clearSelection();
-                        Controllers.dialog(new ResourcePackInfoDialog(selectedItem));
+                    Node node = event.getPickResult().getIntersectedNode();
+                    while (node != null && !(node instanceof ListCell<?> cell && !cell.isEmpty())) {
+                        node = node.getParent();
                     }
+                    if (!(node instanceof ListCell<?> cell) || cell.isEmpty()) {
+                        return;
+                    }
+                    ResourcePackInfoObject clicked = (ResourcePackInfoObject) cell.getItem();
+                    ObservableList<ResourcePackInfoObject> selected = listView.getSelectionModel().getSelectedItems();
+                    List<ResourcePackInfoObject> targets = selected.contains(clicked) && selected.size() > 1
+                            ? new ArrayList<>(selected)
+                            : List.of(clicked);
+
+                    PopupMenu menu = new PopupMenu();
+                    JFXPopup popup = new JFXPopup(menu);
+                    popup.setAutoHide(true);
+                    if (targets.size() == 1) {
+                        menu.getContent().add(new IconedMenuItem(SVG.INFO, i18n("resourcepack.info"),
+                                () -> Controllers.dialog(new ResourcePackInfoDialog(clicked)), popup));
+                        menu.getContent().add(new MenuSeparator());
+                    }
+                    menu.getContent().add(new IconedMenuItem(SVG.CHECK, i18n("button.enable"),
+                            () -> control.setSelectedEnabled(targets, true), popup));
+                    menu.getContent().add(new IconedMenuItem(SVG.CANCEL, i18n("button.disable"),
+                            () -> control.setSelectedEnabled(targets, false), popup));
+                    menu.getContent().add(new MenuSeparator());
+                    menu.getContent().add(new IconedMenuItem(SVG.DELETE, i18n("button.remove"),
+                            () -> Controllers.confirm(i18n("button.remove.confirm"), i18n("button.remove"), () -> {
+                                control.removeSelected(targets);
+                            }, null), popup));
+
+                    popup.show(listView, JFXPopup.PopupVPosition.TOP, JFXPopup.PopupHPosition.LEFT, event.getX(), event.getY());
+                    event.consume();
                 });
 
                 ignoreEvent(listView, KeyEvent.KEY_PRESSED, e -> e.getCode() == KeyCode.ESCAPE);

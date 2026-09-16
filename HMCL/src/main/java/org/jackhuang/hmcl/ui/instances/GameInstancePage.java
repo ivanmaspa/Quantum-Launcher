@@ -42,6 +42,7 @@ import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.ui.decorator.DecoratorAnimatedPage;
 import org.jackhuang.hmcl.ui.decorator.DecoratorPage;
 import org.jackhuang.hmcl.ui.game.GameSettingsPage;
+import org.jackhuang.hmcl.ui.main.LaunchHistoryPage;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.io.FileUtils;
 import org.jetbrains.annotations.Nullable;
@@ -273,6 +274,13 @@ public class GameInstancePage extends DecoratorAnimatedPage implements Decorator
         }
     }
 
+    private void showLaunchHistory() {
+        HMCLGameInstance gameInstance = requireGameInstance();
+        if (gameInstance != null) {
+            Controllers.navigate(new LaunchHistoryPage(gameInstance));
+        }
+    }
+
     private void export() {
         HMCLGameInstance gameInstance = requireGameInstance();
         if (gameInstance != null) {
@@ -372,6 +380,7 @@ public class GameInstancePage extends DecoratorAnimatedPage implements Decorator
                         new IconedMenuItem(SVG.ROCKET_LAUNCH, i18n("instance.launch.test"), control::testGame, managementPopup),
                         new IconedMenuItem(SVG.SCRIPT, i18n("instance.launch_script"), control::generateLaunchScript, managementPopup),
                         new MenuSeparator(),
+                        new IconedMenuItem(SVG.RESTORE, i18n("instance.launch_history"), control::showLaunchHistory, managementPopup),
                         new IconedMenuItem(SVG.EDIT, i18n("instance.manage.rename"), control::rename, managementPopup),
                         new IconedMenuItem(SVG.FOLDER_COPY, i18n("instance.manage.duplicate"), control::duplicate, managementPopup),
                         new IconedMenuItem(SVG.DELETE, i18n("instance.manage.remove"), control::remove, managementPopup),

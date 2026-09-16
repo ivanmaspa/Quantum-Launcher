@@ -813,6 +813,14 @@ public class DefaultLauncher extends Launcher {
 
         env.putAll(options.getEnvironmentVariables());
 
+        // Quantum: под Niri (Wayland) нативный GLFW-путь отрисовывает чёрный объектный курсор
+        // в игре, а системный появляется лишь при наведении на интерактивные элементы.
+        // Убираем WAYLAND_DISPLAY у игрового процесса, заставляя GLFW использовать XWayland (DISPLAY).
+        if (System.getenv("NIRI_SOCKET") != null) {
+            env.remove("WAYLAND_DISPLAY");
+            env.remove("WAYLAND_SOCKET");
+        }
+
         return env;
     }
 
@@ -1042,7 +1050,7 @@ public class DefaultLauncher extends Launcher {
                     LOG.warning("An Exception happened while running exit command.", e);
                 }
             }
-        }), "exit-waiter", isDaemon));
+        }, instance.getId().toString()), "exit-waiter", isDaemon));
     }
 
     private record Command(

@@ -170,6 +170,12 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
                 FXUtils.prepareOnMouseEnter(launcherSettingsItem, Controllers::prepareSettingsPage);
             }
 
+            // diagnostics item in left sidebar
+            AdvancedListItem diagnosticsItem = new AdvancedListItem();
+            diagnosticsItem.setLeftIcon(SVG.FRAME_BUG);
+            diagnosticsItem.setTitle(i18n("quantum.diag.title"));
+            diagnosticsItem.setOnAction(e -> Controllers.navigate(Controllers.getDiagnosticsPage()));
+
             // sixth item in left sidebar
             AdvancedListItem terracottaItem = new AdvancedListItem();
             terracottaItem.setLeftIcon(SVG.GRAPH2);
@@ -204,6 +210,7 @@ public class RootPage extends DecoratorAnimatedPage implements DecoratorPage {
                     .add(bedrockItem)
                     .startCategory(i18n("settings.launcher.general").toUpperCase(Locale.ROOT))
                     .add(launcherSettingsItem)
+                    .add(diagnosticsItem)
                     .add(terracottaItem)
                     .addNavigationDrawerItem(i18n("contact.chat"), SVG.CHAT, () -> {
                         Controllers.getSettingsPage().showFeedback();

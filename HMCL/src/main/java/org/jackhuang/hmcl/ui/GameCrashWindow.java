@@ -34,6 +34,9 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import org.jackhuang.hmcl.Metadata;
+import org.jackhuang.hmcl.diagnostics.ModDiagnosis;
+import org.jackhuang.hmcl.diagnostics.ModDiagnosis.ModProblem;
+import org.jackhuang.hmcl.diagnostics.ModDiagnosis.ModProblemLevel;
 import org.jackhuang.hmcl.game.*;
 import org.jackhuang.hmcl.launch.ProcessListener;
 import org.jackhuang.hmcl.setting.StyleSheets;
@@ -85,6 +88,7 @@ public class GameCrashWindow extends Stage {
     private final View view;
     private final StackPane stackPane;
 
+    private final VBox modDiagnosticsPane = new VBox(4);
     private final List<Log> logs;
 
     public GameCrashWindow(ManagedProcess managedProcess, ProcessListener.ExitType exitType, HMCLGameInstance gameInstance, LaunchOptions launchOptions, List<Log> logs) {
@@ -115,6 +119,7 @@ public class GameCrashWindow extends Stage {
         FXUtils.setIcon(this);
 
         analyzeCrashReport();
+        analyzeMods();
     }
 
     @SuppressWarnings("unchecked")
@@ -212,6 +217,11 @@ public class GameCrashWindow extends Stage {
                     }
                     LOG.info("Crash cause: " + result.rule() + ": " + message);
                     segments.addAll(FXUtils.parseSegment(message, Controllers::onHyperlinkAction));
+                    String humanExplanation = CrashReportAnalyzer.getHumanExplanation(result);
+                    if (humanExplanation != null) {
+                        segments.add(new Text("\n"));
+                        segments.addAll(FXUtils.parseSegment(humanExplanation, Controllers::onHyperlinkAction));
+                    }
                     segments.add(new Text("\n\n"));
                 }
                 if (results.isEmpty()) {
@@ -257,6 +267,44 @@ public class GameCrashWindow extends Stage {
             }
         }
         return translateFabricModId(modName);
+    }
+
+    private void analyzeMods() {
+        if (gameInstance == null) {
+            appendModDiagnosisMessage(i18n("quantum.diag.mods.unknown"), ModProblemLevel.INFO);
+            return;
+        }
+        Task.supplyAsync(() -> ModDiagnosis.analyze(gameInstance))
+                .whenComplete(Schedulers.javafx(), (problems, exception) -> {
+                    if (exception != null) {
+                        LOG.warning("Failed to analyze mods", exception);
+                        appendModDiagnosisMessage(i18n("quantum.diag.mods.failed"), ModProblemLevel.ERROR);
+                        return;
+                    }
+                    if (problems.isEmpty()) {
+                        appendModDiagnosisMessage(i18n("quantum.diag.mods.no_problems"), ModProblemLevel.OK);
+                        return;
+                    }
+                    for (ModProblem problem : problems) {
+                        appendModDiagnosisMessage(problem.message(), problem.level());
+                    }
+                }).start();
+    }
+
+    private void appendModDiagnosisMessage(String message, ModProblemLevel level) {
+        Label label = new Label(message);
+        label.setWrapText(true);
+        label.getStyleClass().add(getStyleClassForLevel(level));
+        modDiagnosticsPane.getChildren().add(label);
+    }
+
+    private static String getStyleClassForLevel(ModProblemLevel level) {
+        return switch (level) {
+            case OK -> "diagnosis-ok";
+            case INFO -> "diagnosis-info";
+            case WARNING -> "diagnosis-warning";
+            case ERROR -> "diagnosis-error";
+        };
     }
 
     private void showLogWindow() {
@@ -422,6 +470,14 @@ public class GameCrashWindow extends Stage {
                 });
             }
 
+            {
+                Label modDiagnosticsTitle = new Label(i18n("quantum.diag.mods.title"));
+                modDiagnosticsTitle.getStyleClass().add("two-line-item-second-large-title");
+                modDiagnosticsPane.setPadding(new Insets(8));
+                modDiagnosticsPane.getStyleClass().addAll("crash-reason-text-flow");
+                modDiagnosticsPane.getChildren().add(modDiagnosticsTitle);
+            }
+
             HBox toolBar = new HBox();
             VBox.setMargin(toolBar, new Insets(0, 0, 4, 0));
             {
@@ -468,7 +524,7 @@ public class GameCrashWindow extends Stage {
                 toolBar.getChildren().setAll(exportButtonPane, logButton, helpButton);
             }
 
-            getChildren().setAll(titlePane, infoPane, moddedPane, gameDirPane, toolBar);
+            getChildren().setAll(titlePane, infoPane, moddedPane, gameDirPane, modDiagnosticsPane, toolBar);
         }
 
     }

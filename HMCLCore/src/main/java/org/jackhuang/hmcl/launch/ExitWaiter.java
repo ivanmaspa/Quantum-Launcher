@@ -21,10 +21,12 @@ import org.jackhuang.hmcl.event.EventBus;
 import org.jackhuang.hmcl.event.JVMLaunchFailedEvent;
 import org.jackhuang.hmcl.event.ProcessExitedAbnormallyEvent;
 import org.jackhuang.hmcl.event.ProcessStoppedEvent;
+import org.jackhuang.hmcl.setting.LaunchHistoryManager;
 import org.jackhuang.hmcl.util.Log4jLevel;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.platform.ManagedProcess;
 import org.jackhuang.hmcl.util.platform.OperatingSystem;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -38,6 +40,7 @@ final class ExitWaiter implements Runnable {
     private final ManagedProcess process;
     private final Collection<Thread> joins;
     private final BiConsumer<Integer, ProcessListener.ExitType> watcher;
+    private final @Nullable String instanceId;
 
     /**
      * Constructor.
@@ -46,9 +49,25 @@ final class ExitWaiter implements Runnable {
      * @param watcher the callback that will be called after process stops.
      */
     public ExitWaiter(ManagedProcess process, Collection<Thread> joins, BiConsumer<Integer, ProcessListener.ExitType> watcher) {
+        this(process, joins, watcher, null);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param process    the process to wait for
+     * @param joins      the threads to join before processing the exit
+     * @param watcher    the callback that will be called after process stops.
+     * @param instanceId the id of the game instance being launched, or `null` to disable launch history recording
+     */
+    public ExitWaiter(ManagedProcess process, Collection<Thread> joins, BiConsumer<Integer, ProcessListener.ExitType> watcher, @Nullable String instanceId) {
         this.process = process;
         this.joins = joins;
         this.watcher = watcher;
+        this.instanceId = instanceId;
+
+        if (instanceId != null)
+            LaunchHistoryManager.INSTANCE.recordLaunchStart(instanceId);
     }
 
     @Override
@@ -58,6 +77,9 @@ final class ExitWaiter implements Runnable {
 
             for (Thread thread : joins)
                 thread.join();
+
+            if (instanceId != null)
+                LaunchHistoryManager.INSTANCE.recordLaunchEnd(instanceId, exitCode);
 
             List<String> errorLines = process.getLines(Log4jLevel::guessLogLineError);
             ProcessListener.ExitType exitType;

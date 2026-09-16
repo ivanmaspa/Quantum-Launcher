@@ -52,6 +52,7 @@ import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.ui.decorator.DecoratorPage;
 import org.jackhuang.hmcl.ui.instances.GameInstanceIconDialog;
 import org.jackhuang.hmcl.ui.instances.GameInstancePage;
+import org.jackhuang.hmcl.ui.main.JavaManagementPage;
 import org.jackhuang.hmcl.util.Holder;
 import org.jackhuang.hmcl.util.Pair;
 import org.jackhuang.hmcl.util.ServerAddress;
@@ -60,17 +61,23 @@ import org.jackhuang.hmcl.util.i18n.I18n;
 import org.jackhuang.hmcl.util.io.FileUtils;
 import org.jackhuang.hmcl.util.platform.Architecture;
 import org.jackhuang.hmcl.util.platform.OperatingSystem;
+import org.jackhuang.hmcl.util.platform.SystemInfo;
 import org.jackhuang.hmcl.util.versioning.GameVersionNumber;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static org.jackhuang.hmcl.util.DataSizeUnit.MEGABYTES;
 import static org.jackhuang.hmcl.util.Pair.pair;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
@@ -83,6 +90,18 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
     private static final PseudoClass PSEUDO_OVERRIDDEN = PseudoClass.getPseudoClass("overridden");
     private static final String INHERIT_BUTTON_STYLE_CLASS = "toggle-icon-tiny";
     private static final int INHERIT_BUTTON_ICON_SIZE = 12;
+
+    /// The upper bound for the recommended memory amount in MiB.
+    private static final int MAX_RECOMMENDED_MEMORY_MIB = 16384;
+
+    /// The base per-mod memory requirement in MiB.
+    private static final int BASE_MOD_MEMORY_MIB = 40;
+
+    /// The maximum per-mod memory adjustment in MiB.
+    private static final int PEAK_MOD_MEMORY_MIB = 100;
+
+    /// The number of mods at which the per-mod memory adjustment plateaus.
+    private static final int MOD_MEMORY_PLATEAU_MODS = 60;
 
     private final boolean isPresetSetting;
 
@@ -122,6 +141,17 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
     private final ObjectProperty<@Nullable InheritableProperty<GameSettings.DetectedJava>> activeParentDetectedJavaProperty = new SimpleObjectProperty<>();
     private final InvalidationListener javaListener = o -> refreshJavaSettings();
     private final InvalidationListener weakJavaListener = holder.weak(javaListener);
+
+    /// The label that displays the version and architecture of the effective Java runtime.
+    private final Label javaVersionArchLabel = new Label();
+
+    /// The recommended Java pane shown for instance settings, or `null` for preset settings.
+    @Nullable
+    private LinePane recommendedJavaPane;
+
+    /// The recommended memory pane created lazily, or `null` before the memory sublist is expanded.
+    @Nullable
+    private LinePane recommendedMemoryPane;
 
     /// Creates a settings page.
     ///
@@ -215,8 +245,24 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
             javaSublist.setTitle(i18n("settings.game.java_directory"));
             javaSublist.setHasSubtitle(true);
             {
+                recommendedJavaPane = !isPresetSetting ? new LinePane() : null;
+                if (recommendedJavaPane != null) {
+                    refreshRecommendedJavaPane();
+                    var recommendedJavaButton = FXUtils.newBorderButton(i18n("quantum.java.apply"));
+                    recommendedJavaButton.setOnAction(e -> applyRecommendedJava());
+                    recommendedJavaPane.setRight(recommendedJavaButton);
+                    javaSublist.getContent().add(recommendedJavaPane);
+                }
+
+                javaVersionArchLabel.setWrapText(true);
+                var javaInfoPane = new VBox();
+                javaInfoPane.setPadding(new Insets(8, 16, 8, 16));
+                javaInfoPane.getChildren().add(javaVersionArchLabel);
+                ComponentList.setNoPadding(javaInfoPane);
+
                 javaItem = new RadioChoiceList<>();
-                javaSublist.getContent().setAll(javaItem);
+                javaSublist.getContent().add(javaItem);
+                javaSublist.getContent().add(javaInfoPane);
                 bindJavaInheritanceButton(javaSublist);
 
                 javaAutoDeterminedOption = new RadioChoiceList.Choice<>(i18n("settings.game.java_directory.auto"), pair(JavaVersionType.AUTO, null));
@@ -434,7 +480,16 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
                         this::getEffectiveParentGameSettings,
                         activeParentSetting);
 
-                return List.of(memoryItem, memoryStatusPane);
+                if (isPresetSetting) {
+                    return List.of(memoryItem, memoryStatusPane);
+                }
+
+                recommendedMemoryPane = new LinePane();
+                refreshRecommendedMemory();
+                var applyButton = FXUtils.newBorderButton(i18n("quantum.ram.apply"));
+                applyButton.setOnAction(e -> applyRecommendedMemory());
+                recommendedMemoryPane.setRight(applyButton);
+                return List.of(recommendedMemoryPane, memoryItem, memoryStatusPane);
             });
             if (autoMemoryButton != null) {
                 memorySublist.setTitleRight(autoMemoryButton);
@@ -2645,6 +2700,8 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
     public void loadInstance(HMCLGameInstance.Optional instance) {
         HMCLGameInstance gameInstance = instance.instance();
         this.gameInstance.set(gameInstance);
+        refreshRecommendedMemory();
+        refreshRecommendedJavaPane();
 
         assert isPresetSetting == (gameInstance == null);
 
@@ -2807,12 +2864,14 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
 
         if (gameInstance == null && autoSelected) {
             javaSublist.setDescription(i18n("settings.game.java_directory.auto"));
+            updateJavaVersionArchLabel(null);
             return;
         }
 
         var selectedJava = javaItem.getSelectedValue();
         if (selectedJava != null && selectedJava.getValue() != null) {
             javaSublist.setDescription(selectedJava.getValue().getBinary().toString());
+            updateJavaVersionArchLabel(selectedJava.getValue());
             return;
         }
 
@@ -2829,12 +2888,160 @@ public final class GameSettingsPage<S extends GameSettings> extends StackPane
                 } else {
                     javaSublist.setDescription(autoSelected ? i18n("settings.game.java_directory.auto.not_found") : i18n("settings.game.java_directory.invalid"));
                 }
+                updateJavaVersionArchLabel(java);
                 return;
             } catch (InterruptedException ignored) {
             }
         }
 
         javaSublist.setDescription("");
+        updateJavaVersionArchLabel(null);
+    }
+
+    /// Formats the Java runtime info displayed next to the Java directory selection.
+    private static String formatJavaInfo(JavaRuntime java) {
+        return i18n("quantum.java.info", java.getVersion(), java.getArchitecture().getDisplayName());
+    }
+
+    /// Updates the Java runtime info label under the Java directory selection.
+    private void updateJavaVersionArchLabel(@Nullable JavaRuntime java) {
+        javaVersionArchLabel.setText(java != null ? formatJavaInfo(java) : "");
+    }
+
+    /// Returns the recommended Java major version for the current instance Minecraft version.
+    private int getRecommendedJavaMajorVersion() {
+        GameVersionNumber version = currentGameVersion();
+        if (version.compareTo("1.20") >= 0)
+            return 21;
+        if (version.compareTo("1.17") >= 0)
+            return 17;
+        return 8;
+    }
+
+    /// Refreshes the recommended Java pane title for the current instance.
+    private void refreshRecommendedJavaPane() {
+        LinePane pane = recommendedJavaPane;
+        if (pane != null) {
+            pane.setTitle(i18n("quantum.java.recommended_version", getRecommendedJavaMajorVersion()));
+        }
+    }
+
+    /// Finds the first installed Java runtime matching the given major version, preferring the system architecture.
+    private @Nullable JavaRuntime findInstalledJava(int majorVersion) {
+        Collection<JavaRuntime> allJava = JavaManager.getAllJavaProperty().get();
+        if (allJava == null) {
+            return null;
+        }
+
+        for (JavaRuntime java : allJava) {
+            if (java.getParsedVersion() == majorVersion && java.getArchitecture() == Architecture.SYSTEM_ARCH) {
+                return java;
+            }
+        }
+
+        for (JavaRuntime java : allJava) {
+            if (java.getParsedVersion() == majorVersion) {
+                return java;
+            }
+        }
+
+        return null;
+    }
+
+    /// Applies the recommended Java runtime to the current instance settings.
+    private void applyRecommendedJava() {
+        S setting = currentSetting.get();
+        if (!(setting instanceof GameSettings.Instance)) {
+            return;
+        }
+
+        int recommendedMajorVersion = getRecommendedJavaMajorVersion();
+        @Nullable JavaRuntime java = findInstalledJava(recommendedMajorVersion);
+        if (java == null) {
+            Controllers.dialog(
+                    new MessageDialogPane.Builder(
+                            i18n("quantum.java.not_found", recommendedMajorVersion),
+                            i18n("message.warning"),
+                            MessageDialogPane.MessageType.WARNING)
+                            .addAction(i18n("quantum.java.management_page"), () -> Controllers.navigate(new JavaManagementPage()))
+                            .addCancel(null)
+                            .build());
+            return;
+        }
+
+        updatingJavaSetting = true;
+        try {
+            setPropertyOverridden(setting, setting.detectedJavaProperty(), true);
+            setPropertyOverridden(setting, setting.javaTypeProperty(), true);
+            setting.detectedJavaProperty().setValue(GameSettings.DetectedJava.of(java));
+            setting.javaTypeProperty().setValue(JavaVersionType.DETECTED);
+        } finally {
+            updatingJavaSetting = false;
+        }
+        initializeSelectedJava();
+        initJavaSubtitle();
+    }
+
+    /// Returns the number of mod JAR files in the current instance mods directory.
+    private int countMods() {
+        HMCLGameInstance gameInstance = this.gameInstance.get();
+        if (gameInstance == null) {
+            return 0;
+        }
+
+        Path modsDirectory = gameInstance.getModsDirectory();
+        if (!Files.isDirectory(modsDirectory)) {
+            return 0;
+        }
+
+        try {
+            return (int) Files.list(modsDirectory)
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().endsWith(".jar"))
+                    .count();
+        } catch (IOException ignored) {
+            return 0;
+        }
+    }
+
+    /// Computes the memory adjustment in MiB derived from the instance mod count.
+    private static int computeModMemoryAdjustmentMiB(int modCount) {
+        if (modCount <= 0) {
+            return 0;
+        }
+
+        int perModMemoryMiB = Math.min(PEAK_MOD_MEMORY_MIB, BASE_MOD_MEMORY_MIB + Math.min(modCount, MOD_MEMORY_PLATEAU_MODS));
+        return modCount * perModMemoryMiB;
+    }
+
+    /// Returns the smart RAM recommendation in MiB for the current instance.
+    private int getRecommendedMemoryMiB() {
+        int totalMemoryMiB = Math.max(1, (int) MEGABYTES.convertFromBytes(SystemInfo.getTotalMemorySize()));
+        long baseMemoryMiB = (long) GameSettings.SUGGESTED_MEMORY + computeModMemoryAdjustmentMiB(countMods());
+        int capMemoryMiB = Math.min(MAX_RECOMMENDED_MEMORY_MIB, Math.max(1, totalMemoryMiB / 2));
+        return (int) Math.min(baseMemoryMiB, capMemoryMiB);
+    }
+
+    /// Refreshes the recommended memory pane title for the current instance.
+    private void refreshRecommendedMemory() {
+        LinePane pane = recommendedMemoryPane;
+        if (pane != null) {
+            pane.setTitle(i18n("quantum.ram.recommended", getRecommendedMemoryMiB()));
+        }
+    }
+
+    /// Applies the smart RAM recommendation to the current instance settings.
+    private void applyRecommendedMemory() {
+        S setting = currentSetting.get();
+        if (!(setting instanceof GameSettings.Instance)) {
+            return;
+        }
+
+        int recommendedMemory = getRecommendedMemoryMiB();
+        setPropertyOverridden(setting, setting.autoMemoryProperty(), true);
+        setPropertyOverridden(setting, setting.maxMemoryProperty(), true);
+        setting.autoMemoryProperty().setValue(false);
+        setting.maxMemoryProperty().setValue(recommendedMemory);
     }
 
     private void onExploreIcon() {

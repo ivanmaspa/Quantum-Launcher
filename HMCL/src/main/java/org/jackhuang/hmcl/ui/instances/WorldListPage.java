@@ -44,6 +44,8 @@ import org.jackhuang.hmcl.task.Task;
 import org.jackhuang.hmcl.ui.*;
 import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.util.ChunkBaseApp;
+import org.jackhuang.hmcl.util.StringUtils;
+import org.jackhuang.hmcl.util.TaskCancellationAction;
 import org.jackhuang.hmcl.util.i18n.I18n;
 import org.jackhuang.hmcl.util.io.FileUtils;
 import org.jackhuang.hmcl.util.versioning.GameVersionNumber;
@@ -201,6 +203,39 @@ public final class WorldListPage extends ListPageBase<World> {
         WorldManageUIUtils.delete(world, this::refresh);
     }
 
+    /// Creates a backup of a single world into the instance backups directory.
+    ///
+    /// @param world the world to back up
+    public void backup(World world) {
+        backupWorlds(List.of(world));
+    }
+
+    /// Creates backups of every loaded world of the current instance.
+    public void backupAllWorlds() {
+        if (worlds != null) {
+            backupWorlds(worlds);
+        }
+    }
+
+    private void backupWorlds(List<World> worldsToBackup) {
+        if (gameInstance == null || worldsToBackup.isEmpty()) {
+            return;
+        }
+
+        Controllers.taskDialog(
+                AutoWorldBackup.backupWorlds(gameInstance.getBackupsDirectory(), worldsToBackup)
+                        .whenComplete(Schedulers.javafx(), (result, exception) -> {
+                            if (exception == null) {
+                                Controllers.dialog(i18n("quantum.worldbackup.success"), null, MessageDialogPane.MessageType.INFO);
+                            } else {
+                                LOG.warning("Failed to create world backups", exception);
+                                Controllers.dialog(i18n("quantum.worldbackup.failed", StringUtils.getStackTrace(exception)), null, MessageDialogPane.MessageType.WARNING);
+                            }
+                        }),
+                i18n("quantum.worldbackup.processing"),
+                TaskCancellationAction.NO_CANCEL);
+    }
+
     public void copy(World world) {
         WorldManageUIUtils.copyWorld(world, this::refresh);
     }
@@ -249,6 +284,7 @@ public final class WorldListPage extends ListPageBase<World> {
             return Arrays.asList(
                     chkShowAll,
                     createToolbarButton2(i18n("button.refresh"), SVG.REFRESH, skinnable::refresh),
+                    createToolbarButton2(i18n("quantum.worldbackup.all"), SVG.ARCHIVE, skinnable::backupAllWorlds),
                     createToolbarButton2(i18n("world.add"), SVG.ADD, skinnable::add),
                     createToolbarButton2(i18n("world.download"), SVG.DOWNLOAD, skinnable::download)
             );
@@ -394,6 +430,7 @@ public final class WorldListPage extends ListPageBase<World> {
             }
 
             popupMenu.getContent().add(new IconedMenuItem(SVG.SETTINGS, i18n("world.manage.button"), () -> page.showManagePage(world), popup));
+            popupMenu.getContent().add(new IconedMenuItem(SVG.ARCHIVE, i18n("quantum.worldbackup.world"), () -> page.backup(world), popup));
 
             if (ChunkBaseApp.isSupported(world)) {
                 popupMenu.getContent().addAll(

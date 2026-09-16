@@ -58,6 +58,9 @@ import org.jackhuang.hmcl.task.Task;
 import org.jackhuang.hmcl.ui.*;
 import org.jackhuang.hmcl.ui.animation.ContainerAnimations;
 import org.jackhuang.hmcl.ui.animation.TransitionPane;
+import org.jackhuang.hmcl.ui.construct.IconedMenuItem;
+import org.jackhuang.hmcl.ui.construct.MenuSeparator;
+import org.jackhuang.hmcl.ui.construct.PopupMenu;
 import org.jackhuang.hmcl.ui.construct.*;
 import org.jackhuang.hmcl.util.*;
 import org.jackhuang.hmcl.util.i18n.I18n;
@@ -544,24 +547,25 @@ public final class ModListPage extends ListPageBase<ModListPage.ModInfoObject> i
                             ? new ArrayList<>(selected)
                             : List.of(clicked);
 
-                    ContextMenu contextMenu = new ContextMenu();
+                    PopupMenu menu = new PopupMenu();
+                    JFXPopup popup = new JFXPopup(menu);
+                    popup.setAutoHide(true);
                     if (targets.size() == 1) {
-                        MenuItem infoItem = new MenuItem(i18n("mods.info"));
-                        infoItem.setOnAction(e -> Controllers.dialog(new ModInfoDialog(clicked)));
-                        contextMenu.getItems().add(infoItem);
+                        menu.getContent().add(new IconedMenuItem(SVG.INFO, i18n("mods.info"),
+                                () -> Controllers.dialog(new ModInfoDialog(clicked)), popup));
+                        menu.getContent().add(new MenuSeparator());
                     }
-                    MenuItem enableItem = new MenuItem(i18n("mods.enable"));
-                    enableItem.setOnAction(e -> skinnable.enableSelected(FXCollections.observableArrayList(targets)));
-                    MenuItem disableItem = new MenuItem(i18n("mods.disable"));
-                    disableItem.setOnAction(e -> skinnable.disableSelected(FXCollections.observableArrayList(targets)));
-                    contextMenu.getItems().addAll(enableItem, disableItem, new SeparatorMenuItem());
-                    MenuItem removeItem = new MenuItem(i18n("button.remove"));
-                    removeItem.setOnAction(e -> Controllers.confirm(i18n("button.remove.confirm"), i18n("button.remove"), () -> {
-                        skinnable.removeSelected(FXCollections.observableArrayList(targets));
-                    }, null));
-                    contextMenu.getItems().add(removeItem);
+                    menu.getContent().add(new IconedMenuItem(SVG.CHECK, i18n("mods.enable"),
+                            () -> skinnable.enableSelected(FXCollections.observableArrayList(targets)), popup));
+                    menu.getContent().add(new IconedMenuItem(SVG.CANCEL, i18n("mods.disable"),
+                            () -> skinnable.disableSelected(FXCollections.observableArrayList(targets)), popup));
+                    menu.getContent().add(new MenuSeparator());
+                    menu.getContent().add(new IconedMenuItem(SVG.DELETE, i18n("button.remove"),
+                            () -> Controllers.confirm(i18n("button.remove.confirm"), i18n("button.remove"), () -> {
+                                skinnable.removeSelected(FXCollections.observableArrayList(targets));
+                            }, null), popup));
 
-                    contextMenu.show(listView, event.getScreenX(), event.getScreenY());
+                    popup.show(listView, JFXPopup.PopupVPosition.TOP, JFXPopup.PopupHPosition.LEFT, event.getX(), event.getY());
                     event.consume();
                 });
 

@@ -82,7 +82,7 @@ import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.javafx.ExtendedProperties.selectedItemPropertyFor;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
-public class DownloadListPage extends Control implements DecoratorPage {
+public class DownloadListPage extends Control implements DecoratorPage, PageAware {
     protected final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>();
     private final BooleanProperty loading = new SimpleBooleanProperty(false);
     private final BooleanProperty failed = new SimpleBooleanProperty(false);
@@ -105,7 +105,12 @@ public class DownloadListPage extends Control implements DecoratorPage {
     private final DownloadProvider downloadProvider;
 
     private final ObservableSet<String> installedKeys = FXCollections.observableSet();
-    private boolean installSweepDone = false;
+    /// Project id to the add-on file it was installed from. Kept alongside {@link #installedKeys}
+    /// so that a re-scan only needs to check the recorded path on disk and does not depend on
+    /// remote fingerprint matching succeeding for every file.
+    private final Map<String, Path> installedFiles = new HashMap<>();
+    private boolean sweepRunning = false;
+    private boolean sweepRequested = false;
 
     /// Whether the download list uses batch selection (checkboxes + "Download selected")
     /// instead of the per-result direct download button.
@@ -191,7 +196,7 @@ public class DownloadListPage extends Control implements DecoratorPage {
                         if (downloadException != null) {
                             Controllers.dialog(DownloadProviders.localizeErrorMessage(downloadException), i18n("install.failed.downloading"), MessageDialogPane.MessageType.ERROR);
                         } else {
-                            installedKeys.add(latest.projectId());
+                            recordInstalled(latest.projectId(), downloadDest(instance, subdirectory, latest));
                             Controllers.showToast(i18n("install.success"));
                         }
                     });
@@ -226,13 +231,23 @@ public class DownloadListPage extends Control implements DecoratorPage {
     /// @param version the add-on version to download
     /// @return the configured file download task
     private FileDownloadTask createFileDownloadTask(HMCLGameInstance instance, String subdirectory, RemoteAddon.Version version) {
-        Path dest = instance.getRunDirectory().resolve(subdirectory).resolve(version.file().filename());
+        Path dest = downloadDest(instance, subdirectory, version);
         FileDownloadTask downloadTask = new FileDownloadTask(
                 downloadProvider.injectURLWithCandidates(version.file().url()),
                 dest,
                 version.file().getIntegrityCheck());
         downloadTask.setName(version.name() + ' ' + version.version());
         return downloadTask;
+    }
+
+    /// Returns the full path the given add-on version is downloaded to within the instance.
+    ///
+    /// @param instance the selected instance
+    /// @param subdirectory the target subdirectory of the run directory
+    /// @param version the add-on version
+    /// @return the destination file path
+    private static Path downloadDest(HMCLGameInstance instance, String subdirectory, RemoteAddon.Version version) {
+        return instance.getRunDirectory().resolve(subdirectory).resolve(version.file().filename());
     }
 
     /// Downloads all add-ons currently marked with a checkbox in batch selection mode.
@@ -300,21 +315,21 @@ public class DownloadListPage extends Control implements DecoratorPage {
             List<FileDownloadTask> fileTasks = versions.stream()
                     .map(version -> createFileDownloadTask(instance, subdirectory, version))
                     .collect(Collectors.toList());
-            Task<?> download = Task.allOf(fileTasks);
-            download.whenComplete(Schedulers.javafx(), (result, downloadException) -> {
-                if (downloadException instanceof CancellationException) {
-                    return;
-                }
-                if (downloadException != null) {
-                    Controllers.dialog(DownloadProviders.localizeErrorMessage(downloadException), i18n("install.failed.downloading"), MessageDialogPane.MessageType.ERROR);
-                    return;
-                }
-                selectedKeys.removeAll(versions.stream().map(RemoteAddon.Version::projectId).collect(Collectors.toList()));
-                for (RemoteAddon.Version version : versions) {
-                    installedKeys.add(version.projectId());
-                }
-                Controllers.showToast(i18n("install.success"));
-            });
+            Task<?> download = Task.allOf(fileTasks)
+                    .whenComplete(Schedulers.javafx(), (result, downloadException) -> {
+                        if (downloadException instanceof CancellationException) {
+                            return;
+                        }
+                        if (downloadException != null) {
+                            Controllers.dialog(DownloadProviders.localizeErrorMessage(downloadException), i18n("install.failed.downloading"), MessageDialogPane.MessageType.ERROR);
+                            return;
+                        }
+                        selectedKeys.removeAll(versions.stream().map(RemoteAddon.Version::projectId).collect(Collectors.toList()));
+                        for (RemoteAddon.Version version : versions) {
+                            recordInstalled(version.projectId(), downloadDest(instance, subdirectory, version));
+                        }
+                        Controllers.showToast(i18n("install.success"));
+                    });
             Controllers.taskDialog(download, i18n("message.downloading"), TaskCancellationAction.NORMAL);
         }).start();
     }
@@ -336,53 +351,96 @@ public class DownloadListPage extends Control implements DecoratorPage {
         return addon.slug();
     }
 
-    /// Scans the locally installed addons of the selected instance and marks matching search
-    /// results as already installed, so their download button is hidden. Runs at most once.
-    public void sweepInstalled() {
-        if (installSweepDone) {
-            return;
-        }
-        installSweepDone = true;
+    /// Records that the given add-on is installed from the given file on disk, so its search
+/// result stops showing the checkbox/download button.
+///
+/// @param projectId the project key of the installed add-on
+/// @param file the file it is installed from
+private void recordInstalled(String projectId, Path file) {
+    installedFiles.put(projectId, file);
+    installedKeys.add(projectId);
+}
 
-        HMCLGameInstance.Optional instanceReference = getInstanceOptional();
-        @Nullable HMCLGameInstance instance = instanceReference.instance();
-        if (instance == null) {
-            return;
-        }
-
-        List<Path> localFiles;
-        try {
-            localFiles = switch (repository.getType()) {
-                case MOD -> instance.getModManager().getLocalFiles().stream()
-                        .map(org.jackhuang.hmcl.addon.LocalAddonFile::getFile)
-                        .toList();
-                case RESOURCE_PACK -> listAddonFiles(instance.getResourcePackDirectory());
-                case SHADER_PACK -> listAddonFiles(instance.getRunDirectory().resolve("shaderpacks"));
-                default -> List.of();
-            };
-        } catch (IOException e) {
-            LOG.warning("Failed to list local addons", e);
-            return;
-        }
-
-        Task.supplyAsync(() -> {
-            Set<String> keys = new HashSet<>();
-            for (Path file : localFiles) {
-                try {
-                    repository.getRemoteVersionByLocalFile(file)
-                            .map(RemoteAddon.Version::projectId)
-                            .ifPresent(keys::add);
-                } catch (IOException e) {
-                    LOG.warning("Failed to match local addon " + file + " in " + repository.getBaseUrl(), e);
-                }
-            }
-            return keys;
-        }).whenComplete(Schedulers.javafx(), (keys, exception) -> {
-            if (exception == null && keys != null) {
-                installedKeys.addAll(keys);
-            }
-        }).start();
+/// Re-scans the locally installed add-ons of the selected instance and mirrors the result in
+/// {@link #installedKeys}, so search results whose files were removed show their button/checkbox again.
+/// Files already recorded via {@link #recordInstalled} or a previous scan are only checked on disk,
+/// new or newly removed files are verified against the remote repositories. Remote lookups may fail
+/// for individual files; such failures merely leave those add-ons unrecorded rather than discarding
+/// the whole snapshot. Calls are coalesced while a scan is running.
+public void sweepInstalled() {
+    if (sweepRunning) {
+        sweepRequested = true;
+        return;
     }
+    sweepRunning = true;
+
+    HMCLGameInstance.Optional instanceReference = getInstanceOptional();
+    @Nullable HMCLGameInstance instance = instanceReference.instance();
+    if (instance == null) {
+        sweepRunning = false;
+        return;
+    }
+
+    List<Path> localFiles;
+    try {
+        localFiles = switch (repository.getType()) {
+            case MOD -> instance.getModManager().getLocalFiles().stream()
+                    .map(org.jackhuang.hmcl.addon.LocalAddonFile::getFile)
+                    .toList();
+            case RESOURCE_PACK -> listAddonFiles(instance.getResourcePackDirectory());
+            case SHADER_PACK -> listAddonFiles(instance.getRunDirectory().resolve("shaderpacks"));
+            default -> List.of();
+        };
+    } catch (IOException e) {
+        LOG.warning("Failed to list local addons", e);
+        sweepRunning = false;
+        return;
+    }
+
+    // Only files that are not yet recorded need a remote fingerprint lookup; the recorded
+    // file paths are already known and are only verified against the disk below.
+    List<Path> toMatch = localFiles.stream()
+            .filter(file -> !installedFiles.containsValue(file))
+            .toList();
+
+    Task.supplyAsync(() -> {
+        List<MatchedFile> matched = new ArrayList<>();
+        for (Path file : toMatch) {
+            try {
+                @Nullable RemoteAddon.Version version = repository.getRemoteVersionByLocalFile(file).orElse(null);
+                if (version != null) {
+                    matched.add(new MatchedFile(version.projectId(), file));
+                }
+            } catch (IOException e) {
+                LOG.warning("Failed to match local addon " + file + " in " + repository.getBaseUrl(), e);
+            }
+        }
+        return matched;
+    }).whenComplete(Schedulers.javafx(), (matched, exception) -> {
+        sweepRunning = false;
+        if (exception == null && matched != null) {
+            // Drop entries whose file was removed, then merge the freshly matched files.
+            installedFiles.entrySet().removeIf(entry -> !Files.isRegularFile(entry.getValue()));
+            for (MatchedFile match : matched) {
+                installedFiles.put(match.projectId(), match.file());
+            }
+            installedKeys.retainAll(installedFiles.keySet());
+            installedKeys.addAll(matched.stream().map(MatchedFile::projectId).toList());
+        }
+        if (sweepRequested) {
+            sweepRequested = false;
+            sweepInstalled();
+        }
+    }).start();
+}
+
+@Override
+public void onPageShown() {
+    sweepInstalled();
+}
+
+private record MatchedFile(String projectId, Path file) {
+}
 
     private static List<Path> listAddonFiles(Path directory) {
         if (!Files.isDirectory(directory)) {
@@ -401,6 +459,15 @@ public class DownloadListPage extends Control implements DecoratorPage {
     }
 
     public void loadInstance(HMCLGameInstance.Optional instance) {
+        // When switching to a different instance, forget the install state computed for the
+        // previously selected one; the page below recomputes it for the new instance.
+        @Nullable HMCLGameInstance previous = instanceReference.get() == null ? null : instanceReference.get().instance();
+        @Nullable HMCLGameInstance current = instance.instance();
+        if (previous != current && (previous == null || current == null || !previous.getRunDirectory().equals(current.getRunDirectory()))) {
+            installedFiles.clear();
+            installedKeys.clear();
+        }
+
         this.instanceReference.set(instance);
 
         setLoading(false);
@@ -933,8 +1000,13 @@ public class DownloadListPage extends Control implements DecoratorPage {
 
                         FXUtils.onClicked(wrapper, () -> {
                             RemoteAddon item = getItem();
-                            if (item != null)
-                                Controllers.navigate(new DownloadPage(getSkinnable(), item, getSkinnable().getInstanceOptional(), getSkinnable().callback));
+                            if (item != null) {
+                                if (getSkinnable().selectionModeProperty().get() && !installedOrAbsent.get()) {
+                                    selectionCheckBox.setSelected(!selectionCheckBox.isSelected());
+                                } else {
+                                    Controllers.navigate(new DownloadPage(getSkinnable(), item, getSkinnable().getInstanceOptional(), getSkinnable().callback));
+                                }
+                            }
                         });
 
                         setPrefWidth(0);
